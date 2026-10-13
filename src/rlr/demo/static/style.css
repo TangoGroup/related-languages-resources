@@ -119,10 +119,12 @@ em { font-style: italic; }
 #map .node { fill: var(--ink); opacity: 0; animation: pop .5s cubic-bezier(.2,.9,.3,1.4) forwards; }
 #map .node--target { fill: var(--oxblood); }
 #map .node--lwc { fill: var(--verdigris); }
+#map .node--sel { fill: var(--ochre); }
 #map .ring { fill: none; stroke: var(--oxblood); stroke-width: 1; opacity: .6; transform-origin: center; animation: ring 2.4s ease-out infinite; }
 #map .label { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-soft); letter-spacing: .02em; }
 #map .label--target { fill: var(--oxblood); font-weight: 500; }
 #map .label--lwc { fill: var(--verdigris); }
+#map .label--sel { fill: var(--ochre); font-weight: 500; }
 #map .scale text { font-family: var(--mono); font-size: 9px; fill: var(--ink-faint); }
 #map .scale line { stroke: var(--ink-faint); stroke-width: 1; }
 @keyframes fade { to { opacity: .55; } }
@@ -168,6 +170,7 @@ em { font-style: italic; }
 .reading__kin { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-faint); font-style: italic; }
 .similarity { display: grid; justify-items: end; gap: 4px; min-width: 120px; }
 .similarity__value { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--ink-soft); }
+.similarity--selected .similarity__value { color: var(--ochre); text-transform: uppercase; letter-spacing: .14em; }
 .similarity__bar { display: block; width: 120px; height: 5px; background: var(--paper-deep); border-radius: 3px; overflow: hidden; }
 .similarity__bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ochre), var(--oxblood)); transition: width .9s cubic-bezier(.2,.8,.2,1); }
 .reading__text { margin: 14px 0 0; font-size: 22px; line-height: 1.45; font-variation-settings: "opsz" 20; hanging-punctuation: first; }

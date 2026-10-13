@@ -42,7 +42,7 @@
   // ---------- constellation map ----------
   function drawMap(target, lwc, related) {
     map.innerHTML = "";
-    const pts = related.filter((r) => r.location).map((r) => ({ ...r, lat: r.location.lat, lon: r.location.lon, kind: "rel" }));
+    const pts = related.filter((r) => r.location).map((r) => ({ ...r, lat: r.location.lat, lon: r.location.lon, kind: r.requested ? "sel" : "rel" }));
     if (target && target.lat != null) pts.push({ code: target.code, name: target.name, lat: target.lat, lon: target.lon, kind: "target", similarity: 1 });
     if (lwc && lwc.lat != null) pts.push({ code: lwc.code, name: lwc.name, lat: lwc.lat, lon: lwc.lon, kind: "lwc", similarity: 0 });
     if (!pts.length) { map.innerHTML = `<text x="20" y="40" class="label">No coordinates to draw.</text>`; return; }
@@ -68,7 +68,7 @@
 
     const t = pts.find((p) => p.kind === "target");
     if (t) {
-      pts.filter((p) => p.kind === "rel").forEach((p, i) => {
+      pts.filter((p) => p.kind === "rel" || p.kind === "sel").forEach((p, i) => {
         const line = el("line", { class: "link", x1: X(t.lon), y1: Y(t.lat), x2: X(p.lon), y2: Y(p.lat), style: `animation-delay:${120 + i * 80}ms` });
         map.appendChild(line);
       });
@@ -81,7 +81,7 @@
     const boxes = (x, y, w, h) => ({ x, y, w, h });
     const collides = (b) => placed.some((o) => b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y) || b.x < 2 || b.x + b.w > W - 2 || b.y < 2 || b.y + b.h > H - 22;
     order.forEach((p, i) => {
-      const r = p.kind === "target" ? 6 : p.kind === "lwc" ? 5 : 3 + 4 * (p.similarity || 0);
+      const r = p.kind === "target" ? 6 : p.kind === "lwc" || p.kind === "sel" ? 5 : 3 + 4 * (p.similarity || 0);
       const cx = X(p.lon), cy = Y(p.lat);
       map.appendChild(el("circle", { class: `node node--${p.kind}`, cx, cy, r, style: `animation-delay:${i * 60}ms` }));
       placed.push(boxes(cx - r, cy - r, 2 * r, 2 * r));
@@ -117,7 +117,7 @@
       const classes = eds.map((e) => e.provenance.license_class);
       const kind = classes.some((c) => c === "open" || c === "noncommercial") ? "open" : classes.some((c) => c === "derivatives_forbidden") ? "display" : "unknown";
       const lic = kind === "open" ? "renderable" : kind === "display" ? "display only" : "no license";
-      return `<li><span class="code">${String(i + 1).padStart(2, "0")}</span><span>${esc(r.name)} <span class="code">${esc(r.code)}${r.requested ? " · requested" : ""}${r.distance_km != null ? ` · ${r.distance_km} km` : ""}</span></span><span class="lic badge badge--${kind}">${lic}</span></li>`;
+      return `<li><span class="code">${String(i + 1).padStart(2, "0")}</span><span>${esc(r.name)} <span class="code">${esc(r.code)}${r.requested ? " · selected" : ""}${r.distance_km != null ? ` · ${r.distance_km} km` : ""}</span></span><span class="lic badge badge--${kind}">${lic}</span></li>`;
     }).join("");
   }
 
@@ -146,14 +146,20 @@
       $(".reading__rank", node).textContent = String(i + 1).padStart(2, "0");
       $(".reading__lang", node).innerHTML = `${esc(rd.language.name)}<small>${esc(rd.language.code)}</small>`;
       const kin = [];
-      if (rd.language.requested) kin.push("you asked for this one");
+      if (rd.language.requested) kin.push("selected by you");
       if (rd.language.shared_country) kin.push("shares a country");
       if (rd.language.distance_km != null) kin.push(`${rd.language.distance_km} km away`);
       if (rd.original.provenance.title) kin.push(rd.original.provenance.title);
       $(".reading__kin", node).textContent = kin.join(" · ");
-      $(".similarity__value", node).textContent = `similarity ${rd.language.similarity.toFixed(2)}`;
-      const bar = $(".similarity__bar i", node);
-      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = `${Math.round(rd.language.similarity * 100)}%`; }));
+      if (rd.language.requested) {
+        $(".similarity", node).classList.add("similarity--selected");
+        $(".similarity__value", node).textContent = "selected";
+        $(".similarity__bar", node).remove();
+      } else {
+        $(".similarity__value", node).textContent = `similarity ${rd.language.similarity.toFixed(2)}`;
+        const bar = $(".similarity__bar i", node);
+        requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = `${Math.round(rd.language.similarity * 100)}%`; }));
+      }
       $(".reading__text", node).textContent = rd.original.text;
       $(".rendering", node).innerHTML = rd.in_lwc ? rendering(rd.in_lwc, lwcName) : "";
       $(".reading__prov", node).innerHTML = provenance(rd.original.provenance);
