@@ -75,6 +75,7 @@ def find_related_languages(
     excluded = {_bare(c) for c in context.excluded_languages} | {_bare(context.target_language)}
     if target.iso:
         excluded.add(target.iso)
+    requested = {_bare(c) for c in context.included_languages} - excluded
     results: list[RelatedLanguage] = []
     for code in sorted({_bare(c) for c in candidates}):
         if code in excluded:
@@ -83,7 +84,7 @@ def find_related_languages(
         if languoid is None:
             continue
         score, shared_country = glottolog.similarity(target, languoid)
-        if score < min_similarity:
+        if score < min_similarity and code not in requested:
             continue
         distance = glottolog.distance_km(target, languoid)
         location = (
@@ -100,10 +101,13 @@ def find_related_languages(
                 shared_country=shared_country,
                 distance_km=round(distance) if distance is not None else None,
                 location=location,
+                requested=code in requested,
             ),
         )
     results.sort(key=lambda r: (-r.similarity, r.distance_km if r.distance_km is not None else 1e9))
-    return results[:limit]
+    asked = [r for r in results if r.requested]
+    found = [r for r in results if not r.requested]
+    return asked + found[:limit]
 
 
 @dataclass(frozen=True, slots=True)

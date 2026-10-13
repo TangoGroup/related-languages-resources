@@ -23,11 +23,14 @@ app = typer.Typer(
 )
 
 
-def _context(target: str, lwc: str, exclude: list[str] | None) -> TranslationContext:
+def _context(
+    target: str, lwc: str, exclude: list[str] | None, include: list[str] | None = None
+) -> TranslationContext:
     return TranslationContext(
         target_language=target,
         lwc=lwc,
         excluded_languages=frozenset(exclude or ()),
+        included_languages=frozenset(include or ()),
     )
 
 
@@ -47,6 +50,9 @@ def languages(
     target: str = typer.Option(..., help="Target language, ISO 639-3."),
     lwc: str = typer.Option("eng", help="Language of Wider Communication, ISO 639-3."),
     exclude: list[str] | None = typer.Option(None, help="Languages to leave out."),
+    include: list[str] | None = typer.Option(
+        None, help="Languages you know; consulted whether or not they are related."
+    ),
     limit: int = typer.Option(10, help="Maximum languages to list."),
     min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
     as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
@@ -102,6 +108,9 @@ def brief(
     lwc: str = typer.Option(..., help="Language of Wider Communication, ISO 639-3."),
     passage: str = typer.Option(..., help="Passage reference, e.g. 'MRK 1:6' or 'MRK 1:4-8'."),
     exclude: list[str] | None = typer.Option(None, help="Languages to leave out."),
+    include: list[str] | None = typer.Option(
+        None, help="Languages you know; consulted whether or not they are related."
+    ),
     limit: int = typer.Option(5, help="Maximum related languages to consult."),
     min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
     as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
@@ -116,7 +125,7 @@ def brief(
     pipeline = build_pipeline(settings)
     pipeline.max_languages = limit
     pipeline.min_similarity = min_similarity
-    briefing = pipeline.brief(_context(target, lwc, exclude), ref)
+    briefing = pipeline.brief(_context(target, lwc, exclude, include), ref)
     if as_json:
         typer.echo(json.dumps(to_jsonable(briefing), indent=2, ensure_ascii=False))
         return
@@ -131,7 +140,9 @@ def brief(
         typer.echo(f"== {lang.name} ({lang.code}, similarity {lang.similarity:.2f})")
         typer.echo(reading.original.text)
         typer.echo(f"   source: {_provenance_line(reading.original.provenance)}")
-        if isinstance(reading.in_lwc, Unavailable):
+        if reading.in_lwc is None:
+            pass
+        elif isinstance(reading.in_lwc, Unavailable):
             typer.echo(f"   in {lwc}: not available. {reading.in_lwc.reason}")
         else:
             typer.echo(f"   in {lwc}: {reading.in_lwc.text}")

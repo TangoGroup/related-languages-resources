@@ -54,7 +54,7 @@ def test_brief_endpoint(client: TestClient) -> None:
     assert body["lwc_reading"]["language"] == "swh"
     assert body["lwc_reading"]["text"].startswith("swh 1:6")
     assert body["readings"][0]["original"]["text"] == "reg 1:6 camel hair"
-    assert body["readings"][0]["in_lwc"]["reason"].startswith("no back-translation capability")
+    assert body["readings"][0]["in_lwc"] is None  # Swahili has an open Bible; nothing to render
     assert body["notes"][0]["note"]["figure"]["label"] == "Metaphor"
     bad = client.get("/api/brief", params={"target": "ngq", "lwc": "swh", "passage": "Mark"})
     assert bad.status_code == 400
@@ -66,3 +66,23 @@ def test_brief_honours_exclusions(client: TestClient) -> None:
         params={"target": "ngq", "lwc": "swh", "passage": "MRK 1:6", "exclude": "reg, swh"},
     )
     assert [x["language"]["code"] for x in r.json()["readings"]] == ["wbi"]
+
+
+def test_brief_honours_inclusions(client: TestClient) -> None:
+    r = client.get(
+        "/api/brief",
+        params={
+            "target": "ngq",
+            "lwc": "swh",
+            "passage": "MRK 1:2",
+            "include": "zga",
+            "min_similarity": "0.99",
+        },
+    )
+    body = r.json()
+    assert [x["language"]["code"] for x in body["readings"]] == ["zga"]
+    assert body["readings"][0]["language"]["requested"] is True
+    langs = client.get(
+        "/api/languages", params={"target": "ngq", "include": "zga", "min_similarity": "0.99"}
+    ).json()
+    assert [x["code"] for x in langs["related"]] == ["zga"]

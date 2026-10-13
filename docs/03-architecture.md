@@ -96,9 +96,11 @@ ranges from ([05-decisions.md](05-decisions.md) §D3).
 
 Where translators understand the LWC better than the related language, a back
 translation from the related language's Bible text into the LWC may be more
-helpful than the raw text. Three gates apply, in order: the source license must
-permit derivatives; a backend must support the language pair; and the result is
-labelled as machine output with the backend named in its provenance.
+helpful than the raw text. It runs only when the LWC has no open Bible of its own: when it does, that
+text leads the briefing and nothing is machine-translated (GAI-10145). Otherwise
+three gates apply, in order: the source license must permit derivatives; a
+backend must support the language pair; and the result is labelled as machine
+output with the backend named in its provenance.
 
 Machine translation is in house (decision D10). `rlr.mt.Translator` is a small
 protocol; `NoTranslator` is the default and supports nothing, so absence is

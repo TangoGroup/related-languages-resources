@@ -77,7 +77,10 @@ value proposition (it pushes judgment back to the user), but it is honest and it
 is cheap.
 
 **Mitigation implemented:** `TranslationContext.excluded_languages` and the
-`--exclude` CLI option. Stage 1 uses the path-overlap measure (D7); its
+`--exclude` CLI option, and its mirror image: `included_languages` /
+`--include` (the "Also include" field in the demo) lets a translator add a
+language they know, which is then consulted whether or not the tree calls it
+related. Stage 1 uses the path-overlap measure (D7); its
 geographic weakness is noted there.
 
 ---

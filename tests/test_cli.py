@@ -52,7 +52,7 @@ def test_brief_renders_readings_and_absence(offline_cli):
     assert (
         "Kara New Testament · Example Publishers · copyright © 2020 · CC BY-SA 4.0" in result.output
     )
-    assert "in swh: not available." in result.output
+    assert "no back-translation capability" not in result.output  # Swahili has an open Bible
     assert "Not shown: zgam has no text for MRK 1:6" in result.output
     assert "-- Metaphor (figures of speech (unfoldingWord))" in result.output
     assert "in swh: not available. no machine translation from eng into swh" in result.output

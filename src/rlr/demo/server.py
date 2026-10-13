@@ -35,6 +35,10 @@ def _target_info(pipeline: Pipeline, code: str) -> dict[str, Any] | None:
     }
 
 
+def _codes(csv: str) -> frozenset[str]:
+    return frozenset(c.strip() for c in csv.split(",") if c.strip())
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the app. The pipeline is constructed once, on first request."""
     resolved = settings or Settings.from_env()
@@ -66,11 +70,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lwc: str = Query("eng"),
         limit: int = Query(10, ge=1, le=50),
         min_similarity: float = Query(0.5, ge=0.0, le=1.0),
+        include: str = Query("", description="Comma-separated codes the reader knows."),
     ) -> JSONResponse:
         p = app.state.get_pipeline()
         p.max_languages = limit
         p.min_similarity = min_similarity
-        ctx = TranslationContext(target_language=target.strip(), lwc=lwc.strip())
+        ctx = TranslationContext(
+            target_language=target.strip(), lwc=lwc.strip(), included_languages=_codes(include)
+        )
         related = p.related_languages(ctx)
         if isinstance(related, Unavailable):
             raise HTTPException(status_code=404, detail=related.reason)
@@ -107,6 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         limit: int = Query(5, ge=1, le=50),
         min_similarity: float = Query(0.5, ge=0.0, le=1.0),
         exclude: str = Query("", description="Comma-separated codes to leave out."),
+        include: str = Query("", description="Comma-separated codes the reader knows."),
     ) -> JSONResponse:
         try:
             ref = PassageRef.parse(passage)
@@ -118,7 +126,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ctx = TranslationContext(
             target_language=target.strip(),
             lwc=lwc.strip(),
-            excluded_languages=frozenset(c.strip() for c in exclude.split(",") if c.strip()),
+            excluded_languages=_codes(exclude),
+            included_languages=_codes(include),
         )
         briefing = p.brief(ctx, ref)
         payload = to_jsonable(briefing)

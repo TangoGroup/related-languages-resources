@@ -44,6 +44,9 @@ class TranslationContext:
     location: Location | None = None
     #: Languages the translator has asked never to be shown again (Q4).
     excluded_languages: frozenset[LanguageCode] = field(default_factory=frozenset)
+    #: Languages the translator says they know, to consult whether or not the
+    #: tree says they are related (review feedback, 2026-10-13).
+    included_languages: frozenset[LanguageCode] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +69,9 @@ class RelatedLanguage:
     #: Great-circle distance between the Glottolog points, when both are known.
     distance_km: float | None = None
     location: Location | None = None
+    #: True when the translator asked for this language rather than the tree
+    #: proposing it; such languages bypass the similarity threshold.
+    requested: bool = False
 
 
 @dataclass(frozen=True, slots=True)

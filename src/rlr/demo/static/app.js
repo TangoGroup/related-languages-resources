@@ -117,7 +117,7 @@
       const classes = eds.map((e) => e.provenance.license_class);
       const kind = classes.some((c) => c === "open" || c === "noncommercial") ? "open" : classes.some((c) => c === "derivatives_forbidden") ? "display" : "unknown";
       const lic = kind === "open" ? "renderable" : kind === "display" ? "display only" : "no license";
-      return `<li><span class="code">${String(i + 1).padStart(2, "0")}</span><span>${esc(r.name)} <span class="code">${esc(r.code)}${r.distance_km != null ? ` · ${r.distance_km} km` : ""}</span></span><span class="lic badge badge--${kind}">${lic}</span></li>`;
+      return `<li><span class="code">${String(i + 1).padStart(2, "0")}</span><span>${esc(r.name)} <span class="code">${esc(r.code)}${r.requested ? " · requested" : ""}${r.distance_km != null ? ` · ${r.distance_km} km` : ""}</span></span><span class="lic badge badge--${kind}">${lic}</span></li>`;
     }).join("");
   }
 
@@ -133,7 +133,7 @@
     }
     if (b.lwc_reading) {
       if (b.lwc_reading.reason) {
-        parts.push(`<div class="plaque plaque--muted"><b>In ${esc(lwcName)}</b>${esc(b.lwc_reading.reason)}</div>`);
+        parts.push(`<div class="plaque plaque--muted"><b>No open Bible in ${esc(lwcName)}</b>Sorry, no open Bible translation is available for ${esc(lwcName)}, so the related readings are rendered by machine where their licenses and the models allow. ${esc(b.lwc_reading.reason)}</div>`);
       } else {
         parts.push(`<article class="reading reading--lwc" style="--i:0"><header class="reading__head"><div class="reading__rank reading__rank--lwc" title="Language of wider communication">LWC</div><div><h3 class="reading__lang">${esc(lwcName)}<small>${esc(b.lwc_reading.language)}</small></h3><p class="reading__kin">the language you read · ${esc(b.lwc_reading.provenance.title || "")}</p></div></header><p class="reading__text">${esc(b.lwc_reading.text)}</p><footer class="reading__prov">${provenance(b.lwc_reading.provenance)}</footer></article>`);
       }
@@ -146,6 +146,7 @@
       $(".reading__rank", node).textContent = String(i + 1).padStart(2, "0");
       $(".reading__lang", node).innerHTML = `${esc(rd.language.name)}<small>${esc(rd.language.code)}</small>`;
       const kin = [];
+      if (rd.language.requested) kin.push("you asked for this one");
       if (rd.language.shared_country) kin.push("shares a country");
       if (rd.language.distance_km != null) kin.push(`${rd.language.distance_km} km away`);
       if (rd.original.provenance.title) kin.push(rd.original.provenance.title);
@@ -154,7 +155,7 @@
       const bar = $(".similarity__bar i", node);
       requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = `${Math.round(rd.language.similarity * 100)}%`; }));
       $(".reading__text", node).textContent = rd.original.text;
-      $(".rendering", node).innerHTML = rendering(rd.in_lwc, lwcName);
+      $(".rendering", node).innerHTML = rd.in_lwc ? rendering(rd.in_lwc, lwcName) : "";
       $(".reading__prov", node).innerHTML = provenance(rd.original.provenance);
       wrap.appendChild(node);
     });
@@ -201,7 +202,7 @@
     try {
       const qs = new URLSearchParams(data).toString();
       const [langRes, briefRes] = await Promise.all([
-        fetch(`/api/languages?${new URLSearchParams({ target: data.target, lwc: data.lwc, limit: data.limit, min_similarity: data.min_similarity })}`),
+        fetch(`/api/languages?${new URLSearchParams({ target: data.target, lwc: data.lwc, limit: data.limit, min_similarity: data.min_similarity, include: data.include || "" })}`),
         fetch(`/api/brief?${qs}`),
       ]);
       const brief = await briefRes.json();

@@ -18,8 +18,8 @@ def test_brief_without_translation_backend(pipeline):
     kara = briefing.readings[0]
     assert kara.original.text == "reg 1:6 camel hair"
     assert kara.original.provenance.license_name == "CC BY-SA 4.0"
-    assert isinstance(kara.in_lwc, Unavailable)
-    assert "backend: none" in kara.in_lwc.reason
+    # Swahili has an open Bible, so no back-translation is attempted.
+    assert kara.in_lwc is None
     # The LWC is shown once, up front, never again as a "related" reading.
     assert "swh" not in [r.language.code for r in briefing.readings]
     assert briefing.lwc_reading.provenance.publisher == "unfoldingWord"
@@ -35,19 +35,46 @@ def test_brief_without_translation_backend(pipeline):
     assert "no notes for MRK 1:1" in empty.no_notes.reason
 
 
-def test_brief_with_translation_backend_respects_licenses(translating_pipeline):
-    ctx = TranslationContext(target_language="ngq", lwc="swh")
+def test_back_translation_runs_only_without_an_open_lwc_bible(translating_pipeline):
+    # English has no Bible in the fixture corpus, so stage 4 runs.
+    ctx = TranslationContext(target_language="ngq", lwc="eng")
     briefing = translating_pipeline.brief(ctx, PassageRef.parse("MRK 1:2-3"))
+    assert isinstance(briefing.lwc_reading, Unavailable)
 
     by_code = {r.language.code: r for r in briefing.readings}
     kara = by_code["reg"]
-    assert kara.in_lwc.text == "[reg->swh] reg 1:2 reg 1:3"
+    assert kara.in_lwc.text == "[reg->eng] reg 1:2 reg 1:3"
     assert kara.in_lwc.derived_from is kara.original
     assert kara.in_lwc.provenance.source.startswith("machine back-translation (fake)")
     assert kara.in_lwc.provenance.license_name == "CC BY-SA 4.0"
     vwanji = by_code["wbi"]
     assert isinstance(vwanji.in_lwc, Unavailable)
     assert "does not permit derivative works" in vwanji.in_lwc.reason
+    # Notes are already in English: shown as they are.
+    assert briefing.notes[0].in_lwc is briefing.notes[0].original
+
+
+def test_requested_languages_bypass_the_threshold(pipeline):
+    ctx = TranslationContext(
+        target_language="ngq", lwc="swh", included_languages=frozenset({"zga"})
+    )
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:2"))
+    codes = [r.language.code for r in briefing.readings]
+    assert codes[0] == "zga"
+    assert briefing.readings[0].language.requested
+    assert all(not r.language.requested for r in briefing.readings[1:])
+    # A requested language with no Bible is reported, not silently dropped.
+    ctx2 = TranslationContext(
+        target_language="ngq", lwc="swh", included_languages=frozenset({"xyz"})
+    )
+    briefing2 = pipeline.brief(ctx2, PassageRef.parse("MRK 1:2"))
+    assert any("xyz was requested but has no Bible" in s.reason for s in briefing2.skipped)
+
+
+def test_notes_render_into_the_lwc(translating_pipeline):
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = translating_pipeline.brief(ctx, PassageRef.parse("MRK 1:2-3"))
+    assert all(r.in_lwc is None for r in briefing.readings)
 
     assert briefing.no_notes is None
     titles = [n.note.title for n in briefing.notes]

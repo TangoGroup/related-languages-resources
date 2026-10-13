@@ -56,8 +56,10 @@ class RelatedLanguageReading:
     language: RelatedLanguage
     #: The passage as published in the related language.
     original: PassageText
-    #: The same passage rendered into the LWC, or why it could not be.
-    in_lwc: PassageText | Unavailable
+    #: The same passage rendered into the LWC, why it could not be, or ``None``
+    #: when no rendering was attempted because the LWC has an open Bible of its
+    #: own (:attr:`Briefing.lwc_reading`), which the translator can read directly.
+    in_lwc: PassageText | Unavailable | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,7 +158,14 @@ class Pipeline:
             )
 
         skipped: list[Unavailable] = []
+        found = {r.code for r in related}
+        for code in sorted(context.included_languages):
+            if code.split("_")[0] not in found and code.split("_")[0] != context.lwc.split("_")[0]:
+                skipped.append(
+                    Unavailable(f"{code} was requested but has no Bible in the eBible Corpus", code)
+                )
         readings: list[RelatedLanguageReading] = []
+        has_lwc_bible = isinstance(lwc_reading, PassageText)
         for lang in related:
             editions = catalog.available_bibles([lang], self.corpus, self.permitted_licenses)
             if not editions:
@@ -170,7 +179,11 @@ class Pipeline:
                 if isinstance(original, Unavailable):
                     skipped.append(original)
                     continue
-                in_lwc = back_translation.back_translate(original, context.lwc, self.translator)
+                in_lwc = (
+                    None
+                    if has_lwc_bible
+                    else back_translation.back_translate(original, context.lwc, self.translator)
+                )
                 readings.append(RelatedLanguageReading(lang, original, in_lwc))
 
         nothing_found: Unavailable | None = None
