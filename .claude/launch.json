@@ -4,8 +4,28 @@
     {
       "name": "rlr-demo",
       "runtimeExecutable": "uv",
-      "runtimeArgs": ["run", "rlr", "serve", "--port", "8765"],
+      "runtimeArgs": [
+        "run",
+        "rlr",
+        "serve",
+        "--port",
+        "8765"
+      ],
       "port": 8765
+    },
+    {
+      "name": "rlr-demo-mt",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "RLR_MT=madlad",
+        "uv",
+        "run",
+        "rlr",
+        "serve",
+        "--port",
+        "8766"
+      ],
+      "port": 8766
     }
   ]
 }

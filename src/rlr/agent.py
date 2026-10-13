@@ -21,7 +21,7 @@ easier to meet when every string shown can be traced to a file and a line.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from rlr import back_translation, catalog, languages, verses
@@ -29,15 +29,24 @@ from rlr.config import Settings
 from rlr.ebible import EBibleCorpus, vref_path
 from rlr.glottolog import Glottolog
 from rlr.mt import load_translator
-from rlr.resources.figures_of_speech import FiguresOfSpeech
-from rlr.types import DISPLAYABLE, PassageText, Provenance, Unavailable
+from rlr.resources import NotePart
+from rlr.resources.figures_of_speech import ALTERNATIVES_LABEL, FiguresOfSpeech, assemble
+from rlr.types import DISPLAYABLE, LicenseClass, PassageText, Provenance, Unavailable
+
+#: Preference order when an LWC has several editions: most open first.
+_LICENSE_RANK: dict[LicenseClass, int] = {
+    LicenseClass.OPEN: 0,
+    LicenseClass.NONCOMMERCIAL: 1,
+    LicenseClass.DERIVATIVES_FORBIDDEN: 2,
+    LicenseClass.UNKNOWN: 3,
+}
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from rlr.mt import Translator
     from rlr.resources import ResourceNote, VerseIndexedResource
-    from rlr.types import LicenseClass, PassageRef, RelatedLanguage, TranslationContext
+    from rlr.types import LanguageCode, PassageRef, RelatedLanguage, TranslationContext
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +85,9 @@ class Briefing:
     nothing_found: Unavailable | None = None
     #: Set when no resource yielded a note, explaining why.
     no_notes: Unavailable | None = None
+    #: The passage in the LWC's own Bible, shown before the related readings:
+    #: the LWC is almost always the translator's source text (2026-09-25).
+    lwc_reading: PassageText | Unavailable | None = None
 
 
 @dataclass(slots=True)
@@ -93,7 +105,12 @@ class Pipeline:
     min_similarity: float = languages.DEFAULT_MIN_SIMILARITY
 
     def related_languages(self, context: TranslationContext) -> list[RelatedLanguage] | Unavailable:
-        """Stage 1 over the languages the corpus actually has."""
+        """Stage 1 over the languages the corpus actually has.
+
+        The LWC itself is never a *related* language: its text is shown
+        separately as :attr:`Briefing.lwc_reading`.
+        """
+        context = replace(context, excluded_languages=context.excluded_languages | {context.lwc})
         return languages.find_related_languages(
             context,
             self.glottolog,
@@ -102,11 +119,41 @@ class Pipeline:
             limit=self.max_languages,
         )
 
+    def lwc_reading(
+        self, context: TranslationContext, passage: PassageRef
+    ) -> PassageText | Unavailable:
+        """The passage in the LWC's own Bible, from its most openly licensed edition."""
+        editions = [
+            e
+            for e in self.corpus.editions_for(context.lwc)
+            if e.provenance.license_class in self.permitted_licenses
+        ]
+        if not editions:
+            return Unavailable(
+                f"no Bible in {context.lwc} in the eBible Corpus with a displayable license",
+                context.lwc,
+            )
+        edition = min(
+            editions, key=lambda e: (_LICENSE_RANK[e.provenance.license_class], e.edition_id)
+        )
+        text_path = verses.ensure_cached(edition, self.corpus, self.settings)
+        return verses.fetch_passage(edition, passage, self.index, text_path)
+
     def brief(self, context: TranslationContext, passage: PassageRef) -> Briefing:
         """Run the full pipeline and assemble a briefing for ``passage``."""
+        lwc_reading = self.lwc_reading(context, passage)
         related = self.related_languages(context)
         if isinstance(related, Unavailable):
-            return Briefing(context, passage, (), (), (), nothing_found=related, no_notes=None)
+            return Briefing(
+                context,
+                passage,
+                (),
+                (),
+                (),
+                nothing_found=related,
+                no_notes=None,
+                lwc_reading=lwc_reading,
+            )
 
         skipped: list[Unavailable] = []
         readings: list[RelatedLanguageReading] = []
@@ -157,7 +204,19 @@ class Pipeline:
             skipped=tuple(skipped),
             nothing_found=nothing_found,
             no_notes=no_notes,
+            lwc_reading=lwc_reading,
         )
+
+    def _render_note(self, note: ResourceNote, source: LanguageCode, target: LanguageCode) -> str:
+        """Translate a note part by part; quoted source text stays verbatim."""
+        rendered = [
+            NotePart(
+                p.role, self.translator.translate(p.text, source, target) if p.translate else p.text
+            )
+            for p in note.parts
+        ]
+        label = self.translator.translate(ALTERNATIVES_LABEL, source, target).rstrip(":")
+        return assemble(rendered, label)
 
     def _notes(self, context: TranslationContext, passage: PassageRef) -> list[ResourceReading]:
         out: list[ResourceReading] = []
@@ -186,7 +245,7 @@ class Pipeline:
                         context.lwc,
                     )
                 else:
-                    rendered = self.translator.translate(note.body, source_lang, context.lwc)
+                    rendered = self._render_note(note, source_lang, context.lwc)
                     in_lwc = PassageText(
                         passage=note.passage,
                         language=context.lwc,

@@ -17,7 +17,7 @@ stage 4 output as a reading aid, not a literal back-translation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from rlr.config import Settings
@@ -42,6 +42,7 @@ _ISO3_TO_MADLAD: dict[str, str] = {
     "som": "so",
     "yor": "yo",
     "ibo": "ig",
+    "lug": "lg",
     "lin": "ln",
     "kin": "rw",
     "run": "rn",
@@ -102,44 +103,67 @@ class NoTranslator:
 class MadladTranslator:
     """MADLAD-400 through ``transformers``. Loaded lazily on first use."""
 
-    def __init__(self, model_id: str = "google/madlad400-3b-mt", max_new_tokens: int = 256) -> None:
-        """Bind to a model id; nothing is downloaded until the first call."""
+    def __init__(
+        self,
+        model_id: str = "google/madlad400-3b-mt",
+        max_new_tokens: int = 256,
+        device: str | None = None,
+    ) -> None:
+        """Bind to a model id; nothing is downloaded until the first call.
+
+        Args:
+            model_id: Hugging Face model id.
+            max_new_tokens: Generation cap per call.
+            device: ``"cuda"``, ``"cpu"`` or ``None`` to pick CUDA when present.
+        """
         self.model_id = model_id
         self.max_new_tokens = max_new_tokens
-        self._model: object | None = None
-        self._tokenizer: object | None = None
+        self.device = device
+        self._model: Any = None
+        self._tokenizer: Any = None
 
     @property
     def name(self) -> str:
         """The model id's final path component."""
         return self.model_id.rsplit("/", 1)[-1]
 
-    def _load(self) -> tuple[object, object]:
+    def _load(self) -> tuple[Any, Any]:
         if self._model is None or self._tokenizer is None:
             try:
-                from transformers import (  # type: ignore[import-not-found]  # noqa: PLC0415
+                import torch  # type: ignore[import-not-found,unused-ignore]  # noqa: PLC0415
+                from transformers import (  # type: ignore[import-not-found,unused-ignore]  # noqa: PLC0415
                     AutoTokenizer,
                     T5ForConditionalGeneration,
                 )
             except ImportError as exc:  # pragma: no cover - depends on extras
                 msg = "MADLAD backend needs the 'mt' extra: uv sync --extra mt"
                 raise RuntimeError(msg) from exc
-            self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-            self._model = T5ForConditionalGeneration.from_pretrained(self.model_id)
+            if self.device is None:
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
+            load_model: Any = T5ForConditionalGeneration.from_pretrained
+            load_tokenizer: Any = AutoTokenizer.from_pretrained
+            self._tokenizer = load_tokenizer(self.model_id)
+            self._model = load_model(self.model_id, torch_dtype=dtype).to(self.device).eval()
         return self._model, self._tokenizer
 
     def supports(self, source: LanguageCode, target: LanguageCode) -> bool:
-        """Whether the tokenizer knows the target tag (source is auto-detected)."""
+        """Whether MADLAD was trained on both languages.
+
+        The model detects the source language itself, but on a language it
+        was never trained on it echoes or hallucinates rather than failing, so
+        an unknown source is reported as unsupported.
+        """
         _, tokenizer = self._load()
-        vocab = tokenizer.get_vocab()  # type: ignore[attr-defined]
-        return madlad_tag(target) in vocab
+        vocab = tokenizer.get_vocab()
+        return madlad_tag(source) in vocab and madlad_tag(target) in vocab
 
     def translate(self, text: str, source: LanguageCode, target: LanguageCode) -> str:
         """Run one generation with the ``<2xx>`` target prefix."""
         model, tokenizer = self._load()
-        inputs = tokenizer(f"{madlad_tag(target)} {text}", return_tensors="pt")  # type: ignore[operator]
-        outputs = model.generate(**inputs, max_new_tokens=self.max_new_tokens)  # type: ignore[attr-defined]
-        decoded: str = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]  # type: ignore[attr-defined]
+        inputs = tokenizer(f"{madlad_tag(target)} {text}", return_tensors="pt").to(self.device)
+        outputs = model.generate(**inputs, max_new_tokens=self.max_new_tokens)
+        decoded: str = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
         return decoded.strip()
 
 

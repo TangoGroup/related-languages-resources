@@ -34,6 +34,81 @@ if TYPE_CHECKING:
 RANGE_MARKER = "<range>"
 
 
+#: The 66 books of the Protestant canon, in USFM order. ``vref.txt`` also lists
+#: deuterocanonical books, which most translation agencies do not translate, so
+#: user-facing verse counts are taken over this set.
+PROTESTANT_BOOKS: frozenset[str] = frozenset(
+    [
+        "GEN",
+        "EXO",
+        "LEV",
+        "NUM",
+        "DEU",
+        "JOS",
+        "JDG",
+        "RUT",
+        "1SA",
+        "2SA",
+        "1KI",
+        "2KI",
+        "1CH",
+        "2CH",
+        "EZR",
+        "NEH",
+        "EST",
+        "JOB",
+        "PSA",
+        "PRO",
+        "ECC",
+        "SNG",
+        "ISA",
+        "JER",
+        "LAM",
+        "EZK",
+        "DAN",
+        "HOS",
+        "JOL",
+        "AMO",
+        "OBA",
+        "JON",
+        "MIC",
+        "NAM",
+        "HAB",
+        "ZEP",
+        "HAG",
+        "ZEC",
+        "MAL",
+        "MAT",
+        "MRK",
+        "LUK",
+        "JHN",
+        "ACT",
+        "ROM",
+        "1CO",
+        "2CO",
+        "GAL",
+        "EPH",
+        "PHP",
+        "COL",
+        "1TH",
+        "2TH",
+        "1TI",
+        "2TI",
+        "TIT",
+        "PHM",
+        "HEB",
+        "JAS",
+        "1PE",
+        "2PE",
+        "1JN",
+        "2JN",
+        "3JN",
+        "JUD",
+        "REV",
+    ]
+)
+
+
 class VerseIndex:
     """A ``vref.txt``-backed index mapping references to corpus line numbers."""
 
@@ -47,8 +122,12 @@ class VerseIndex:
         self._index: dict[str, int] = {ref: i for i, ref in enumerate(self._refs)}
 
     def __len__(self) -> int:
-        """Number of verse references."""
+        """Number of verse references, deuterocanon included."""
         return len(self._refs)
+
+    def count_in(self, books: frozenset[str] = PROTESTANT_BOOKS) -> int:
+        """Number of verse references whose book is in ``books``."""
+        return sum(1 for ref in self._refs if ref.split(" ", 1)[0] in books)
 
     def __contains__(self, ref: VerseRef) -> bool:
         """Whether ``ref`` is in the canonical list."""

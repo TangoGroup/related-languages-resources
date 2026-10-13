@@ -36,7 +36,7 @@
 
   // ---------- status ----------
   fetch("/api/status").then((r) => r.json()).then((s) => {
-    statusEl.innerHTML = `<b>${s.languages_with_bibles}</b> languages with Scripture in the eBible Corpus · <b>${s.glottolog_languoids.toLocaleString()}</b> Glottolog languoids · <b>${s.verses.toLocaleString()}</b> canonical verses · notes: <b>${s.resources.length ? s.resources.join(", ") : "none configured"}</b> · MT backend: <b>${s.mt_backend}</b>`;
+    statusEl.innerHTML = `<b>${s.languages_with_bibles}</b> languages with Scripture in the eBible Corpus · <b>${s.glottolog_languoids.toLocaleString()}</b> Glottolog languoids · <b>${s.verses.toLocaleString()}</b> verses in the Protestant canon · notes: <b>${s.resources.length ? s.resources.join(", ") : "none configured"}</b> · MT backend: <b>${s.mt_backend}</b>`;
   }).catch(() => { statusEl.textContent = "corpus unavailable"; });
 
   // ---------- constellation map ----------
@@ -131,11 +131,18 @@
     if (b.nothing_found) {
       parts.push(`<div class="plaque"><b>Nothing to show</b>${esc(b.nothing_found.reason)}</div>`);
     }
+    if (b.lwc_reading) {
+      if (b.lwc_reading.reason) {
+        parts.push(`<div class="plaque plaque--muted"><b>In ${esc(lwcName)}</b>${esc(b.lwc_reading.reason)}</div>`);
+      } else {
+        parts.push(`<article class="reading reading--lwc" style="--i:0"><header class="reading__head"><div class="reading__rank reading__rank--lwc" title="Language of wider communication">LWC</div><div><h3 class="reading__lang">${esc(lwcName)}<small>${esc(b.lwc_reading.language)}</small></h3><p class="reading__kin">the language you read · ${esc(b.lwc_reading.provenance.title || "")}</p></div></header><p class="reading__text">${esc(b.lwc_reading.text)}</p><footer class="reading__prov">${provenance(b.lwc_reading.provenance)}</footer></article>`);
+      }
+    }
     const wrap = document.createElement("div");
     wrap.innerHTML = parts.join("");
     b.readings.forEach((rd, i) => {
       const node = readingTpl.content.firstElementChild.cloneNode(true);
-      node.style.setProperty("--i", i);
+      node.style.setProperty("--i", i + 1);
       $(".reading__rank", node).textContent = String(i + 1).padStart(2, "0");
       $(".reading__lang", node).innerHTML = `${esc(rd.language.name)}<small>${esc(rd.language.code)}</small>`;
       const kin = [];
@@ -164,7 +171,7 @@
       const grid = document.createElement("div"); grid.className = "notes__grid";
       b.notes.forEach((n, i) => {
         const node = noteTpl.content.firstElementChild.cloneNode(true);
-        node.style.setProperty("--i", i);
+        node.style.setProperty("--i", i + 1);
         const fig = n.note.figure;
         const ref = `${n.note.passage.start.book} ${n.note.passage.start.chapter}:${n.note.passage.start.verse}${n.note.passage.start.verse !== n.note.passage.end.verse ? `-${n.note.passage.end.verse}` : ""}`;
         $(".note__title", node).innerHTML = `${esc(fig.label)}<small>${esc(ref)} · ${esc(fig.id)}</small>`;

@@ -125,11 +125,22 @@ Environment variables:
 |---|---|
 | `RLR_CACHE_DIR` | Download cache (default `~/.cache/rlr`) |
 | `RLR_FIGURES_DIR` | Optional alternative snapshot of the figures-of-speech data (`figs_types.yaml` plus `figs_instances/`). Unset, the copy bundled in `bible-figures-of-speech` is used |
-| `RLR_MT` | Machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt` |
+| `RLR_MT` | Machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt`, a GPU with about 12 GB free is recommended |
 | `RLR_LWC_CSV` | Optional `lwc.csv` (per-language LWC probabilities) to suggest LWCs |
 | `RLR_OFFLINE` | Set to fail instead of downloading |
 
 Extras: `demo` (FastAPI + uvicorn for `rlr serve`), `mt` (MADLAD-400 via transformers).
+
+To see the back-translations and the notes rendered into the LWC:
+
+```bash
+uv sync --extra dev --extra demo --extra mt   # adds torch and transformers
+RLR_MT=madlad ./run                           # first use downloads the 11 GB model
+```
+
+Stages 4 and 5 then render into any language MADLAD-400 covers (Swahili,
+Indonesian, Portuguese and some 400 others); related languages it was not
+trained on are reported as unavailable rather than guessed.
 
 A narrated walkthrough of the demo UI can be re-recorded with
 `demo/record.py`: it drives the running server with Playwright, narrates each

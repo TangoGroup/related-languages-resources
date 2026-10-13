@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from rlr.agent import Pipeline
-from rlr.types import PassageRef, TranslationContext, Unavailable
+from rlr.types import PassageRef, PassageText, TranslationContext, Unavailable
 
 
 def test_brief_without_translation_backend(pipeline):
@@ -11,15 +11,18 @@ def test_brief_without_translation_backend(pipeline):
     briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:6"))
 
     assert briefing.nothing_found is None
-    assert [r.language.code for r in briefing.readings] == ["reg", "swh", "wbi"]
+    assert [r.language.code for r in briefing.readings] == ["reg", "wbi"]
+    assert isinstance(briefing.lwc_reading, PassageText)
+    assert briefing.lwc_reading.language == "swh"
+    assert briefing.lwc_reading.text.startswith("swh 1:6")
     kara = briefing.readings[0]
     assert kara.original.text == "reg 1:6 camel hair"
     assert kara.original.provenance.license_name == "CC BY-SA 4.0"
     assert isinstance(kara.in_lwc, Unavailable)
     assert "backend: none" in kara.in_lwc.reason
-    swahili = briefing.readings[1]
-    assert isinstance(swahili.in_lwc, Unavailable)
-    assert "already is the LWC" in swahili.in_lwc.reason
+    # The LWC is shown once, up front, never again as a "related" reading.
+    assert "swh" not in [r.language.code for r in briefing.readings]
+    assert briefing.lwc_reading.provenance.publisher == "unfoldingWord"
     # Kinga has no MRK 1:6, so it is skipped with a reason rather than dropped.
     assert any("zgam has no text for MRK 1:6" in s.reason for s in briefing.skipped)
     # The fixture's range note (MRK 1:4-8) overlaps 1:6, so stage 5 has one hit.
@@ -53,6 +56,14 @@ def test_brief_with_translation_backend_respects_licenses(translating_pipeline):
     assert idiom.original.language == "eng"
     assert idiom.in_lwc.language == "swh"
     assert idiom.in_lwc.text.startswith("[eng->swh] Idiom:")
+    # Rendered part by part: the quoted source text stays verbatim, each
+    # alternative is translated on its own, and the label is translated too.
+    lines = idiom.in_lwc.text.split("\n")
+    assert lines[1] == "“before your face” (πρὸ προσώπου σου)"
+    assert lines[2].startswith("[eng->swh] Here, the phrase")
+    assert lines[3] == (
+        "[eng->swh] Alternate translation: [eng->swh] in front of you; [eng->swh] before I send you"
+    )
     assert idiom.in_lwc.derived_from is idiom.original
     assert idiom.in_lwc.provenance.publisher == "unfoldingWord"
 

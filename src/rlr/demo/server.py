@@ -54,7 +54,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "languages_with_bibles": len(p.corpus.languages),
             "glottolog_languoids": len(p.glottolog),
-            "verses": len(p.index),
+            "verses": p.index.count_in(),
+            "verses_total": len(p.index),
             "resources": [r.name for r in p.resources],
             "mt_backend": p.translator.name,
         }

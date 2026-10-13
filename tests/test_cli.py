@@ -46,6 +46,7 @@ def test_brief_renders_readings_and_absence(offline_cli):
         app, ["brief", "--target", "ngq", "--lwc", "swh", "--passage", "MRK 1:6"]
     )
     assert result.exit_code == 0, result.output
+    assert result.output.index("== In swh") < result.output.index("== Kara")
     assert "== Kara (Tanzania) (reg, similarity 0.75)" in result.output
     assert "reg 1:6 camel hair" in result.output
     assert (

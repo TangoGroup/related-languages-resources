@@ -62,3 +62,15 @@ def test_offline_cache_miss_raises(corpus, settings):
     (settings.cache_dir / "ebible" / "corpus" / "swh-swhulb.txt").unlink()
     with pytest.raises(OfflineError):
         ensure_cached(swh, corpus, settings)
+
+
+def test_protestant_canon_count(tmp_path):
+    from rlr.verses import PROTESTANT_BOOKS, VerseIndex
+
+    vref = tmp_path / "vref.txt"
+    vref.write_text("GEN 1:1\nGEN 1:2\nTOB 1:1\nMRK 1:1\nENO 1:1\n")
+    idx = VerseIndex(vref)
+    assert len(idx) == 5
+    assert idx.count_in() == 3
+    assert idx.count_in(frozenset({"TOB"})) == 1
+    assert len(PROTESTANT_BOOKS) == 66

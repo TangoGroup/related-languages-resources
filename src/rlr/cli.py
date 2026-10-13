@@ -14,7 +14,7 @@ from rlr.agent import build_pipeline
 from rlr.config import Settings
 from rlr.languages import suggest_lwcs
 from rlr.serialize import to_jsonable
-from rlr.types import PassageRef, Provenance, TranslationContext, Unavailable
+from rlr.types import PassageRef, PassageText, Provenance, TranslationContext, Unavailable
 
 app = typer.Typer(
     name="rlr",
@@ -84,6 +84,18 @@ def languages(
             )
 
 
+def _echo_lwc_reading(reading: PassageText | Unavailable | None, lwc: str) -> None:
+    if reading is None:
+        return
+    if isinstance(reading, Unavailable):
+        typer.echo(f"== In {lwc}: not available. {reading.reason}")
+    else:
+        typer.echo(f"== In {lwc}")
+        typer.echo(reading.text)
+        typer.echo(f"   source: {_provenance_line(reading.provenance)}")
+    typer.echo("")
+
+
 @app.command()
 def brief(
     target: str = typer.Option(..., help="Target language, ISO 639-3."),
@@ -111,6 +123,7 @@ def brief(
 
     typer.echo(f"{ref} for {target}, read in {lwc}")
     typer.echo("")
+    _echo_lwc_reading(briefing.lwc_reading, lwc)
     if briefing.nothing_found:
         typer.echo(f"Related-language readings: none. {briefing.nothing_found.reason}")
     for reading in briefing.readings:

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Protocol
 
 import bible_figures_of_speech as bfs
 
+from rlr.resources import NotePart
 from rlr.types import LicenseClass, PassageRef, Provenance, VerseRef
 
 if TYPE_CHECKING:
@@ -93,20 +94,23 @@ class FigureNote:
         return self.figure.label
 
     @property
-    def body(self) -> str:
-        """Type summary, then the verse-specific comment and alternatives."""
-        parts = [f"{self.figure.label}: {self.figure.summary}"]
+    def parts(self) -> tuple[NotePart, ...]:
+        """Summary, quoted text (verbatim), comment, then each alternative."""
+        out = [NotePart("summary", f"{self.figure.label}: {self.figure.summary}")]
         if self.translation:
             quoted = f"“{self.translation}”"
             if self.source_text:
                 quoted += f" ({self.source_text})"
-            parts.append(quoted)
+            out.append(NotePart("quote", quoted, translate=False))
         if self.comment:
-            parts.append(self.comment)
-        if self.alternate_translations:
-            alts = "; ".join(self.alternate_translations)
-            parts.append(f"Alternate translation: {alts}")
-        return "\n".join(parts)
+            out.append(NotePart("comment", self.comment))
+        out.extend(NotePart("alternative", alt) for alt in self.alternate_translations)
+        return tuple(out)
+
+    @property
+    def body(self) -> str:
+        """Type summary, then the verse-specific comment and alternatives."""
+        return assemble(self.parts)
 
     @property
     def provenance(self) -> Provenance:
@@ -119,6 +123,18 @@ class FigureNote:
             license_class=LicenseClass.OPEN,
             url=self.figure.source_url,
         )
+
+
+ALTERNATIVES_LABEL = "Alternate translation"
+
+
+def assemble(parts: Sequence[NotePart], label: str = ALTERNATIVES_LABEL) -> str:
+    """Join note parts back into display text, alternatives on one line."""
+    lines = [p.text for p in parts if p.role != "alternative"]
+    alts = [p.text for p in parts if p.role == "alternative"]
+    if alts:
+        lines.append(f"{label}: {'; '.join(alts)}")
+    return "\n".join(lines)
 
 
 class FiguresOfSpeech:
