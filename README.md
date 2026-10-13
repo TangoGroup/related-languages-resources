@@ -125,22 +125,38 @@ Environment variables:
 |---|---|
 | `RLR_CACHE_DIR` | Download cache (default `~/.cache/rlr`) |
 | `RLR_FIGURES_DIR` | Optional alternative snapshot of the figures-of-speech data (`figs_types.yaml` plus `figs_instances/`). Unset, the copy bundled in `bible-figures-of-speech` is used |
-| `RLR_MT` | Machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt`, a GPU with about 12 GB free is recommended |
+| `RLR_MT` | Live machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt`. Pre-rendered notes work without it |
+| `RLR_RENDERINGS_DIR` | Extra directory of pre-rendered translations (`<lwc>.json.gz`), searched before the cache and the bundled copies |
 | `RLR_LWC_CSV` | Optional `lwc.csv` (per-language LWC probabilities) to suggest LWCs |
 | `RLR_OFFLINE` | Set to fail instead of downloading |
 
 Extras: `demo` (FastAPI + uvicorn for `rlr serve`), `mt` (MADLAD-400 via transformers).
 
-To see the back-translations and the notes rendered into the LWC:
+**Pre-rendered notes.** The figures-of-speech notes for the Gospels of Mark,
+Luke and John come with the package already rendered into Swahili, Indonesian
+and Portuguese (`src/rlr/data/renderings/<lwc>.json.gz`, produced once with
+MADLAD-400), so the demo shows notes in those languages with no model
+installed. Renderings are looked up before any live backend, so this works
+with the default `RLR_MT=none`.
+
+**Live machine translation.** For other passages or languages, run the model
+in-process; there is no server:
 
 ```bash
 uv sync --extra dev --extra demo --extra mt   # adds torch and transformers
 RLR_MT=madlad ./run                           # first use downloads the 11 GB model
 ```
 
-Stages 4 and 5 then render into any language MADLAD-400 covers (Swahili,
-Indonesian, Portuguese and some 400 others); related languages it was not
-trained on are reported as unavailable rather than guessed.
+Stages 4 and 5 then render into any language MADLAD-400 covers (some 400);
+related languages it was not trained on are reported as unavailable rather
+than guessed. Budget about 6 GB of RAM with a GPU, 12 GB without, and a few
+seconds per sentence on a CPU.
+
+**Extending the pre-rendered set.** `rlr pretranslate --lwc ind --book ROM`
+renders a book's notes once with the live backend into your cache
+(`~/.cache/rlr/renderings`); `--bundle` writes into the package data
+instead, for shipping. `RLR_RENDERINGS_DIR` adds another directory to search
+first.
 
 A narrated walkthrough of the demo UI can be re-recorded with
 `demo/record.py`: it drives the running server with Playwright, narrates each
@@ -228,7 +244,9 @@ src/rlr/
   languages.py        stage 1 — related-language identification
   catalog.py          stage 2 — which related languages have usable Bibles
   verses.py           stage 3 — verse/pericope retrieval from the corpus
-  mt.py               Translator protocol and backends (none, MADLAD-400)
+  mt.py               Translator protocol and backends (none, MADLAD-400, pre-rendered)
+  renderings.py       pre-rendered translations: file format, cache, batch renderer
+  data/renderings/    notes for the Gospels rendered into Swahili, Indonesian, Portuguese
   back_translation.py stage 4 — rendering into the LWC
   resources/          stage 5 — English-only verse-indexed resources
   agent.py            the pipeline that hides all of the above

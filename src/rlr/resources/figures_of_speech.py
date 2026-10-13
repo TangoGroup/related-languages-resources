@@ -168,6 +168,14 @@ class FiguresOfSpeech:
         """The notes are written in English."""
         return self._fos.source_language()
 
+    def books(self) -> list[str]:
+        """USFM codes of books with instance data, in canonical order."""
+        return self._fos.books()
+
+    def notes_in(self, book: str) -> Sequence[FigureNote]:
+        """Every note for a book (USFM code), in file order."""
+        return [FigureNote.from_instance(n) for n in self._fos.instances(book)]
+
     def notes_for(self, passage: PassageRef) -> Sequence[FigureNote]:
         """Return figure-of-speech notes overlapping ``passage``, in file order."""
         return [FigureNote.from_instance(n) for n in self._fos.notes_for(passage)]

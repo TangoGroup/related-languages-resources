@@ -28,7 +28,7 @@ from rlr import back_translation, catalog, languages, verses
 from rlr.config import Settings
 from rlr.ebible import EBibleCorpus, vref_path
 from rlr.glottolog import Glottolog
-from rlr.mt import load_translator
+from rlr.mt import TranslationUnavailable, load_translator
 from rlr.resources import NotePart
 from rlr.resources.figures_of_speech import ALTERNATIVES_LABEL, FiguresOfSpeech, assemble
 from rlr.types import DISPLAYABLE, LicenseClass, PassageText, Provenance, Unavailable
@@ -258,7 +258,15 @@ class Pipeline:
                         context.lwc,
                     )
                 else:
-                    rendered = self._render_note(note, source_lang, context.lwc)
+                    try:
+                        rendered = self._render_note(note, source_lang, context.lwc)
+                    except TranslationUnavailable as exc:
+                        out.append(
+                            ResourceReading(
+                                resource.name, note, original, Unavailable(str(exc), context.lwc)
+                            )
+                        )
+                        continue
                     in_lwc = PassageText(
                         passage=note.passage,
                         language=context.lwc,

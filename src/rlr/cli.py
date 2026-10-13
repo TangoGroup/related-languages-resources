@@ -7,12 +7,24 @@ is the agent surfacing results next to the verse a translator is working on.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import typer
 
 from rlr.agent import build_pipeline
 from rlr.config import Settings
 from rlr.languages import suggest_lwcs
+from rlr.mt import NoTranslator, load_backend
+from rlr.renderings import (
+    RenderingFile,
+    bundled_dir,
+    file_name,
+    note_texts,
+    read_file,
+    render_texts,
+    write_file,
+)
+from rlr.resources.figures_of_speech import LICENSE_NAME, SOURCE_NAME, FiguresOfSpeech
 from rlr.serialize import to_jsonable
 from rlr.types import PassageRef, PassageText, Provenance, TranslationContext, Unavailable
 
@@ -163,6 +175,58 @@ def brief(
             typer.echo(note.in_lwc.text)
             typer.echo(f"   rendering: {note.in_lwc.provenance.source}")
         typer.echo(f"   source: {_provenance_line(note.original.provenance)}")
+
+
+@app.command()
+def pretranslate(
+    lwc: str = typer.Option(..., help="Target language to render the notes into, ISO 639-3."),
+    book: list[str] | None = typer.Option(
+        None, help="USFM book codes to cover (repeatable). Default: every book."
+    ),
+    batch_size: int = typer.Option(32, help="Sentences per generation batch."),
+    bundle: bool = typer.Option(
+        False, "--bundle", help="Write into the package's bundled data directory, for shipping."
+    ),
+    out: Path | None = typer.Option(None, help="Explicit output file (<lwc>.json.gz)."),
+) -> None:
+    """Render the figures-of-speech notes into an LWC once, so the demo needs no model."""
+    settings = Settings.from_env()
+    backend = load_backend(settings)
+    if isinstance(backend, NoTranslator):
+        typer.echo("pretranslate needs a live backend: set RLR_MT=madlad (uv sync --extra mt)")
+        raise typer.Exit(code=2)
+    resource = FiguresOfSpeech(settings.figures_dir)
+    source = resource.source_language()
+    if not backend.supports(source, lwc):
+        typer.echo(f"{backend.name} cannot render {source} into {lwc}")
+        raise typer.Exit(code=2)
+    if out is None:
+        root = Path(str(bundled_dir())) if bundle else settings.cache_dir / "renderings"
+        out = root / file_name(lwc)
+    books = [b.upper() for b in book] if book else resource.books()
+    existing = (
+        read_file(out)
+        if out.exists()
+        else RenderingFile(
+            backend=backend.name,
+            source=source,
+            target=lwc,
+            derived_from=SOURCE_NAME,
+            license=LICENSE_NAME,
+        )
+    )
+    texts = note_texts(n for b in books for n in resource.notes_in(b))
+    typer.echo(f"{len(texts)} distinct strings across {len(books)} book(s); rendering into {lwc}")
+
+    def progress(done: int, total: int) -> None:
+        typer.echo(f"  {done}/{total}", nl=False)
+        typer.echo("\r", nl=False)
+
+    added = render_texts(
+        texts, backend, source, lwc, existing, batch_size=batch_size, progress=progress
+    )
+    write_file(out, existing)
+    typer.echo(f"{added} new rendering(s); {len(existing.entries)} total in {out}")
 
 
 @app.command()

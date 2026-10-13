@@ -6,7 +6,15 @@ import pytest
 
 from rlr.back_translation import back_translate, supports
 from rlr.config import Settings
-from rlr.mt import MadladTranslator, NoTranslator, load_translator, madlad_tag
+from rlr.mt import (
+    CachedTranslator,
+    MadladTranslator,
+    NoTranslator,
+    load_backend,
+    load_translator,
+    madlad_tag,
+)
+from rlr.renderings import RenderingCache
 from rlr.types import LicenseClass, PassageRef, PassageText, Provenance, Unavailable
 
 
@@ -16,16 +24,30 @@ def test_madlad_tags():
     assert madlad_tag("ffm_Latn") == "<2ffm>"
 
 
-def test_load_translator_selects_backend():
-    assert isinstance(load_translator(Settings(mt_backend="none")), NoTranslator)
-    madlad = load_translator(Settings(mt_backend="madlad:org/model"))
+def test_load_backend_selects_backend():
+    assert isinstance(load_backend(Settings(mt_backend="none")), NoTranslator)
+    madlad = load_backend(Settings(mt_backend="madlad:org/model"))
     assert isinstance(madlad, MadladTranslator)
     assert madlad.name == "model"
-    default = load_translator(Settings(mt_backend="madlad"))
+    default = load_backend(Settings(mt_backend="madlad"))
     assert isinstance(default, MadladTranslator)
     assert default.model_id == "google/madlad400-3b-mt"
     with pytest.raises(ValueError, match="unknown RLR_MT backend"):
-        load_translator(Settings(mt_backend="babelfish"))
+        load_backend(Settings(mt_backend="babelfish"))
+
+
+def test_load_translator_wraps_backend_in_the_rendering_cache(tmp_path):
+    t = load_translator(
+        Settings(mt_backend="none", cache_dir=tmp_path, renderings_dir=tmp_path / "x")
+    )
+    assert isinstance(t, CachedTranslator)
+    assert isinstance(t.inner, NoTranslator)
+    # Directories are searched in order: RLR_RENDERINGS_DIR, the cache, the bundled copies.
+    dirs = [str(d) for d in t.cache.dirs]
+    assert dirs[:2] == [str(tmp_path / "x"), str(tmp_path / "renderings")]
+    assert dirs[2].endswith("renderings")
+    empty = CachedTranslator(NoTranslator(), RenderingCache([tmp_path / "nothing"]))
+    assert empty.name == "none"
 
 
 def test_no_translator_refuses_loudly():

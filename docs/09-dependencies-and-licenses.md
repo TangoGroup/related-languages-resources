@@ -61,6 +61,12 @@ virtualenv, distlib, cfgv, identify, nodeenv, iniconfig, pluggy,
 types-pyyaml, httpx2 (and httpcore2, truststore): all MIT, BSD, PSF or
 Apache-2.0, except `pathspec` (**MPL-2.0**, via mypy and pre-commit).
 
+## Data shipped inside the package
+
+| File | What | License |
+|---|---|---|
+| `src/rlr/data/renderings/swh.json.gz`, `ind.json.gz`, `por.json.gz` | The figures-of-speech notes for Mark, Luke and John rendered into Swahili, Indonesian and Portuguese by MADLAD-400 (`rlr pretranslate --bundle`), keyed by a hash of the English | **CC BY-SA 4.0**: derivative works of unfoldingWord's notes, so they carry the same license (recorded in each file) |
+
 ## Data read at run time
 
 | Source | License | Redistributed by RLR? |

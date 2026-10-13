@@ -20,7 +20,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from rlr.config import Settings
+    from rlr.renderings import RenderingCache
     from rlr.types import LanguageCode
 
 #: ISO 639-3 codes whose MADLAD language tag is the two-letter ISO 639-1 code.
@@ -68,6 +71,10 @@ def madlad_tag(code: LanguageCode) -> str:
     return f"<2{_ISO3_TO_MADLAD.get(bare, bare)}>"
 
 
+class TranslationUnavailable(RuntimeError):
+    """Raised when a backend cannot produce a particular translation."""
+
+
 class Translator(Protocol):
     """Anything that can render text from one language into another."""
 
@@ -97,7 +104,7 @@ class NoTranslator:
     def translate(self, text: str, source: LanguageCode, target: LanguageCode) -> str:
         """Never valid."""
         msg = "no machine translation backend is configured (set RLR_MT)"
-        raise RuntimeError(msg)
+        raise TranslationUnavailable(msg)
 
 
 class MadladTranslator:
@@ -160,15 +167,82 @@ class MadladTranslator:
 
     def translate(self, text: str, source: LanguageCode, target: LanguageCode) -> str:
         """Run one generation with the ``<2xx>`` target prefix."""
+        return self.translate_many([text], source, target)[0]
+
+    def translate_many(
+        self, texts: Sequence[str], source: LanguageCode, target: LanguageCode
+    ) -> list[str]:
+        """Translate a batch in one padded generation (much faster on a GPU)."""
         model, tokenizer = self._load()
-        inputs = tokenizer(f"{madlad_tag(target)} {text}", return_tensors="pt").to(self.device)
+        tag = madlad_tag(target)
+        inputs = tokenizer([f"{tag} {t}" for t in texts], return_tensors="pt", padding=True).to(
+            self.device
+        )
         outputs = model.generate(**inputs, max_new_tokens=self.max_new_tokens)
-        decoded: str = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
-        return decoded.strip()
+        decoded: list[str] = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        return [d.strip() for d in decoded]
+
+
+class CachedTranslator:
+    """Pre-rendered translations first, a live backend second.
+
+    ``supports`` is true when either side can serve the pair; ``translate``
+    raises :class:`TranslationUnavailable` for a text that is not pre-rendered
+    when no live backend can produce it, which the pipeline reports as absence.
+    """
+
+    def __init__(self, inner: Translator, cache: RenderingCache) -> None:
+        """Wrap ``inner`` with ``cache``."""
+        self.inner = inner
+        self.cache = cache
+
+    @property
+    def name(self) -> str:
+        """The live backend's name, or the pre-rendering backends' with a marker."""
+        if isinstance(self.inner, NoTranslator):
+            backends = self.cache.backends()
+            return f"{', '.join(sorted(backends))} (pre-rendered)" if backends else "none"
+        return self.inner.name
+
+    def supports(self, source: LanguageCode, target: LanguageCode) -> bool:
+        """Whether renderings exist or the live backend can produce them."""
+        return self.cache.has_language(source, target) or self.inner.supports(source, target)
+
+    def translate(self, text: str, source: LanguageCode, target: LanguageCode) -> str:
+        """Serve from the cache, else the live backend."""
+        hit = self.cache.lookup(text, source, target)
+        if hit is not None:
+            return hit[0]
+        if self.inner.supports(source, target):
+            return self.inner.translate(text, source, target)
+        backend = self.cache.backend_for(source, target) or "none"
+        msg = (
+            f"not pre-rendered into {target} "
+            f"(renderings: {backend}; live backend: {self.inner.name})"
+        )
+        raise TranslationUnavailable(msg)
+
+    def translate_many(
+        self, texts: Sequence[str], source: LanguageCode, target: LanguageCode
+    ) -> list[str]:
+        """Batch form, cache hits served inline."""
+        return [self.translate(t, source, target) for t in texts]
 
 
 def load_translator(settings: Settings) -> Translator:
-    """Build the backend named by ``settings.mt_backend``.
+    """The live backend from ``settings``, behind the rendering cache."""
+    from rlr.renderings import RenderingCache, bundled_dir  # noqa: PLC0415
+
+    dirs: list[Any] = []
+    if settings.renderings_dir is not None:
+        dirs.append(settings.renderings_dir)
+    dirs.append(settings.cache_dir / "renderings")
+    dirs.append(bundled_dir())
+    return CachedTranslator(load_backend(settings), RenderingCache(dirs))
+
+
+def load_backend(settings: Settings) -> Translator:
+    """Build the live backend named by ``settings.mt_backend``.
 
     ``none`` (default) gives :class:`NoTranslator`; ``madlad`` or
     ``madlad:<model-id>`` gives :class:`MadladTranslator`.

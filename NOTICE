@@ -10,6 +10,11 @@ RLR reads from third-party corpora and resource catalogues at run time
 bible-figures-of-speech package, and others). Those works carry their own
 licenses, which are not superseded by RLR's. See docs/04-data-sources.md.
 
+src/rlr/data/renderings/*.json.gz are machine translations (MADLAD-400) of
+unfoldingWord Translation Notes and translationAcademy content, (c)
+unfoldingWord, CC BY-SA 4.0, as reorganised in the bible-figures-of-speech
+package. As derivative works they are distributed under CC BY-SA 4.0.
+
 The test fixtures under tests/fixtures include small excerpts of third-party
 data, reproduced under their own licenses:
 

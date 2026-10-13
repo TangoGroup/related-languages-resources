@@ -136,6 +136,16 @@ package (snapshot 2026-09-16), has two parts:
   verse or a range like `ROM 3:1-ROM 3:9`), `type_id`, source-language text,
   English gloss, the note's comment and its alternate translations.
 
+Rendering into the LWC goes through `rlr.mt.CachedTranslator`: pre-rendered
+translations (`rlr.renderings`, one gzipped JSON file per target language,
+keyed by a hash of the source text) are served first, and the live backend
+only for what they lack. The package ships the Gospels of Mark, Luke and John
+in Swahili, Indonesian and Portuguese, produced once by `rlr pretranslate`
+with MADLAD-400, so a clone of the repository shows notes in those languages
+with no model installed. Notes are rendered part by part (type summary,
+comment, each alternative; quoted source text stays verbatim), because a
+sentence-level model degrades on a whole note.
+
 `rlr.resources.figures_of_speech.FiguresOfSpeech` wraps the package's loader
 (bundled data, or `RLR_FIGURES_DIR` for another snapshot) and returns notes whose
 reference overlaps the passage. The agent renders each note into the LWC through

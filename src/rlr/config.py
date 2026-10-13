@@ -15,6 +15,9 @@ service share one source of truth:
     Optional directory holding a different snapshot of the figures-of-speech
     data (``figs_types.yaml`` plus ``figs_instances/``). Unset, the copy
     bundled with ``bible-figures-of-speech`` is used.
+``RLR_RENDERINGS_DIR``
+    Optional directory of pre-rendered translations (``<lwc>.json.gz``, see
+    :mod:`rlr.renderings`), searched before the cache and the bundled copies.
 ``RLR_LWC_CSV``
     Optional path to an ``lwc.csv`` (per-language LWC probabilities, see
     :func:`rlr.languages.suggest_lwcs`) for suggesting Languages of Wider
@@ -45,6 +48,7 @@ class Settings:
 
     cache_dir: Path = field(default_factory=_default_cache_dir)
     figures_dir: Path | None = None
+    renderings_dir: Path | None = None
     lwc_csv: Path | None = None
     mt_backend: str = "none"
     #: Skip network access entirely; missing files raise instead of download.
@@ -55,10 +59,12 @@ class Settings:
         """Read settings from the ``RLR_*`` environment variables."""
         cache = os.environ.get("RLR_CACHE_DIR")
         figures = os.environ.get("RLR_FIGURES_DIR")
+        renderings = os.environ.get("RLR_RENDERINGS_DIR")
         lwc = os.environ.get("RLR_LWC_CSV")
         return cls(
             cache_dir=Path(cache).expanduser() if cache else _default_cache_dir(),
             figures_dir=Path(figures).expanduser() if figures else None,
+            renderings_dir=Path(renderings).expanduser() if renderings else None,
             lwc_csv=Path(lwc).expanduser() if lwc else None,
             mt_backend=os.environ.get("RLR_MT", "none"),
             offline=os.environ.get("RLR_OFFLINE", "") not in ("", "0", "false"),
