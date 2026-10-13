@@ -208,7 +208,7 @@ uv run mypy                        # typecheck (strict)
 ## Repository layout
 
 ```
-docs/                 the specification, in eight numbered documents
+docs/                 the specification, in nine numbered documents
 src/rlr/
   types.py            core domain types (PassageRef, Provenance, LicenseClass, ...)
   config.py           settings from RLR_* variables; the download cache
@@ -238,10 +238,13 @@ tests/                offline; fixtures under tests/fixtures
 - [`docs/06-open-questions.md`](docs/06-open-questions.md)
 - [`docs/07-success-metrics.md`](docs/07-success-metrics.md)
 - [`docs/08-future-work.md`](docs/08-future-work.md)
+- [`docs/09-dependencies-and-licenses.md`](docs/09-dependencies-and-licenses.md)
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Third-party corpora
 and the `bible-figures-of-speech` data (CC BY-SA 4.0) carry their own licenses;
-RLR's own license does not extend to them. Contributions are welcome; see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+RLR's own license does not extend to them. Every dependency and data source,
+with its license, is listed in
+[`docs/09-dependencies-and-licenses.md`](docs/09-dependencies-and-licenses.md).
+Contributions are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
