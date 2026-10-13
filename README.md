@@ -126,6 +126,7 @@ Environment variables:
 | `RLR_CACHE_DIR` | Download cache (default `~/.cache/rlr`) |
 | `RLR_FIGURES_DIR` | Optional alternative snapshot of the figures-of-speech data (`figs_types.yaml` plus `figs_instances/`). Unset, the copy bundled in `bible-figures-of-speech` is used |
 | `RLR_MT` | Live machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt`. Pre-rendered notes work without it |
+| `RLR_MT_DEVICE` | Force `cuda`, `mps` or `cpu` for the live backend; unset picks the best available |
 | `RLR_RENDERINGS_DIR` | Extra directory of pre-rendered translations (`<lwc>.json.gz`), searched before the cache and the bundled copies |
 | `RLR_LWC_CSV` | Optional `lwc.csv` (per-language LWC probabilities) to suggest LWCs |
 | `RLR_OFFLINE` | Set to fail instead of downloading |

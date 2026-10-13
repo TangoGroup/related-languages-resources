@@ -36,6 +36,17 @@ def test_load_backend_selects_backend():
         load_backend(Settings(mt_backend="babelfish"))
 
 
+def test_backend_device_override(monkeypatch):
+    monkeypatch.setenv("RLR_MT_DEVICE", "cpu")
+    forced = load_backend(Settings(mt_backend="madlad"))
+    assert isinstance(forced, MadladTranslator)
+    assert forced.device == "cpu"
+    monkeypatch.delenv("RLR_MT_DEVICE")
+    auto = load_backend(Settings(mt_backend="madlad"))
+    assert isinstance(auto, MadladTranslator)
+    assert auto.device is None
+
+
 def test_load_translator_wraps_backend_in_the_rendering_cache(tmp_path):
     t = load_translator(
         Settings(mt_backend="none", cache_dir=tmp_path, renderings_dir=tmp_path / "x")

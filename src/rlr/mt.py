@@ -17,6 +17,7 @@ stage 4 output as a reading aid, not a literal back-translation.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
@@ -275,6 +276,7 @@ def load_backend(settings: Settings) -> Translator:
         return NoTranslator()
     kind, _, model_id = backend.partition(":")
     if kind == "madlad":
-        return MadladTranslator(model_id) if model_id else MadladTranslator()
+        device = os.environ.get("RLR_MT_DEVICE") or None
+        return MadladTranslator(model_id or "google/madlad400-3b-mt", device=device)
     msg = f"unknown RLR_MT backend {backend!r} (expected 'none' or 'madlad[:model-id]')"
     raise ValueError(msg)

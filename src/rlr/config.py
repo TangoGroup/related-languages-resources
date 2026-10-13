@@ -25,6 +25,9 @@ service share one source of truth:
 ``RLR_MT``
     Machine-translation backend: ``none`` (default) or ``madlad`` /
     ``madlad:<model-id>``. See :mod:`rlr.mt`.
+``RLR_MT_DEVICE``
+    Force the device for the live backend (``cuda``, ``mps`` or ``cpu``);
+    unset, the best available is picked.
 """
 
 from __future__ import annotations
