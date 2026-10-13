@@ -20,6 +20,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib.resources import files
@@ -124,17 +125,19 @@ class RenderingCache:
         """Search ``dirs`` in order for ``<target>.json.gz`` files."""
         self.dirs = list(dirs)
         self._loaded: dict[str, list[RenderingFile]] = {}
+        self._lock = threading.Lock()
 
     def _files(self, target: LanguageCode) -> list[RenderingFile]:
         bare = target.split("_")[0]
-        if bare not in self._loaded:
-            found: list[RenderingFile] = []
-            for d in self.dirs:
-                candidate = d / file_name(bare)
-                if candidate.is_file():
-                    found.append(read_file(candidate))
-            self._loaded[bare] = found
-        return self._loaded[bare]
+        with self._lock:
+            if bare not in self._loaded:
+                found: list[RenderingFile] = []
+                for d in self.dirs:
+                    candidate = d / file_name(bare)
+                    if candidate.is_file():
+                        found.append(read_file(candidate))
+                self._loaded[bare] = found
+            return self._loaded[bare]
 
     def backends(self) -> set[str]:
         """Names of every backend that produced a file in any directory."""

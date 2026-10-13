@@ -18,6 +18,7 @@ stage 4 output as a reading aid, not a literal back-translation.
 from __future__ import annotations
 
 import os
+import threading
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
@@ -129,6 +130,13 @@ class MadladTranslator:
         self.device = device
         self._model: Any = None
         self._tokenizer: Any = None
+        # One generation at a time. The demo server handles requests on a
+        # thread pool, and a page reload (or Back) starts a new briefing while
+        # the abandoned one is still generating; two threads driving the same
+        # model concurrently crashes Metal on Apple silicon outright
+        # ("A command encoder is already encoding to this command buffer")
+        # and gains nothing elsewhere.
+        self._lock = threading.Lock()
 
     @property
     def name(self) -> str:
@@ -136,6 +144,10 @@ class MadladTranslator:
         return self.model_id.rsplit("/", 1)[-1]
 
     def _load(self) -> tuple[Any, Any]:
+        with self._lock:
+            return self._load_locked()
+
+    def _load_locked(self) -> tuple[Any, Any]:
         if self._model is None or self._tokenizer is None:
             try:
                 import torch  # type: ignore[import-not-found,unused-ignore]  # noqa: PLC0415
