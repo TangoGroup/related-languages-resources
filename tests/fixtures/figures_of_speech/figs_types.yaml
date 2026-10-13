@@ -1,0 +1,16 @@
+- id: figs-metaphor
+  label: Metaphor
+  summary: One thing is spoken of as if it were another to highlight a shared quality.
+  description: A metaphor is a figure of speech in which someone speaks of one thing as if it were a different thing.
+  condensed_description: Short.
+  translation_issue: People may not realise the words are not literal.
+  examples: []
+  source_url: https://git.door43.org/unfoldingWord/en_ta/src/branch/master/translate/figs-metaphor
+- id: figs-idiom
+  label: Idiom
+  summary: A phrase whose meaning differs from the meanings of its words.
+  description: An idiom is a figure of speech made up of a group of words that, as a whole, has a meaning that is different from what one would understand from the meanings of the individual words.
+  condensed_description: Short.
+  translation_issue: Idioms cannot be translated word for word.
+  examples: []
+  source_url: https://git.door43.org/unfoldingWord/en_ta/src/branch/master/translate/figs-idiom

@@ -1,0 +1,16 @@
+ID,Name,Macroarea,Latitude,Longitude,Glottocode,ISO639P3code,Level,Countries,Family_ID,Language_ID,Closest_ISO369P3code,First_Year_Of_Documentation,Last_Year_Of_Documentation,Is_Isolate
+atla1278,Atlantic-Congo,Africa,,,atla1278,,family,,,,,,,
+bant1000,Bantu,Africa,,,bant1000,,family,,atla1278,,,,,
+lacu1000,Lacustrine,Africa,,,lacu1000,,family,,atla1278,,,,,
+high1000,Highland,Africa,,,high1000,,family,,atla1278,,,,,
+ngor1000,Ngoreme,Africa,-1.9,34.5,ngor1000,ngq,language,TZ,atla1278,,ngq,,,false
+kara1000,Kara (Tanzania),Africa,-2.0,32.8,kara1000,reg,language,TZ,atla1278,,reg,,,false
+king1000,Kinga,Africa,-9.2,34.3,king1000,zga,language,TZ,atla1278,,zga,,,false
+vwan1000,Vwanji,Africa,-9.1,34.0,vwan1000,wbi,language,TZ,atla1278,,wbi,,,false
+swah1253,Swahili,Africa,-8.25,37.6,swah1253,swh,language,TZ;KE,atla1278,,swh,,,false
+biaf1240,Biafada,Africa,11.467,-15.1347,biaf1240,bif,language,GW,atla1278,,bif,,,false
+sand1273,Sandawe,Africa,-5.27,35.48,sand1273,sad,language,TZ,,,sad,,,true
+stan1293,English,Eurasia,53.0,-1.0,stan1293,eng,language,GB;US,indo1319,,eng,,,false
+indo1319,Indo-European,Eurasia,,,indo1319,,family,,,,,,,
+ruwi1234,Ruwila,Africa,-5.0,32.0,ruwi1234,rwl,dialect,TZ,atla1278,kono1000,rwl,,,false
+kono1000,Konongo,Africa,-5.1,31.9,kono1000,kcz,language,TZ,atla1278,,kcz,,,false

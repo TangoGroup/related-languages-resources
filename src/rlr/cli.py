@@ -1,0 +1,158 @@
+"""``rlr`` command-line entry point.
+
+The CLI is a development and evaluation surface, not the product. The product
+is the agent surfacing results next to the verse a translator is working on.
+"""
+
+from __future__ import annotations
+
+import json
+
+import typer
+
+from rlr.agent import build_pipeline
+from rlr.config import Settings
+from rlr.languages import suggest_lwcs
+from rlr.serialize import to_jsonable
+from rlr.types import PassageRef, Provenance, TranslationContext, Unavailable
+
+app = typer.Typer(
+    name="rlr",
+    help="Related Languages Resources: Bible translation resources from nearby languages.",
+    no_args_is_help=True,
+)
+
+
+def _context(target: str, lwc: str, exclude: list[str] | None) -> TranslationContext:
+    return TranslationContext(
+        target_language=target,
+        lwc=lwc,
+        excluded_languages=frozenset(exclude or ()),
+    )
+
+
+def _provenance_line(p: Provenance) -> str:
+    bits = [p.title]
+    if p.publisher:
+        bits.append(p.publisher)
+    if p.published:
+        bits.append(str(p.published))
+    bits.append(p.license_name or f"license {p.license_class.value}")
+    line = " · ".join(bits)
+    return f"{line} [{p.source}]" + (f" <{p.url}>" if p.url else "")
+
+
+@app.command()
+def languages(
+    target: str = typer.Option(..., help="Target language, ISO 639-3."),
+    lwc: str = typer.Option("eng", help="Language of Wider Communication, ISO 639-3."),
+    exclude: list[str] | None = typer.Option(None, help="Languages to leave out."),
+    limit: int = typer.Option(10, help="Maximum languages to list."),
+    min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
+    as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
+) -> None:
+    """List the languages with eBible texts that RLR considers related to the target."""
+    settings = Settings.from_env()
+    pipeline = build_pipeline(settings)
+    pipeline.max_languages = limit
+    pipeline.min_similarity = min_similarity
+    related = pipeline.related_languages(_context(target, lwc, exclude))
+    if isinstance(related, Unavailable):
+        typer.echo(f"Nothing: {related.reason}")
+        raise typer.Exit(code=1)
+    if as_json:
+        typer.echo(json.dumps(to_jsonable(related), indent=2, ensure_ascii=False))
+        return
+    if not related:
+        typer.echo(f"No language with an eBible text scores >= {min_similarity} against {target}.")
+        return
+    for lang in related:
+        editions = pipeline.corpus.editions_for(lang.code)
+        licenses = ", ".join(sorted({e.provenance.license_name or "unknown" for e in editions}))
+        flags = " (shared country)" if lang.shared_country else ""
+        km = f", {lang.distance_km} km" if lang.distance_km is not None else ""
+        typer.echo(
+            f"{lang.similarity:.2f}  {lang.code:5s} {lang.name}{flags}{km}: "
+            f"{len(editions)} edition(s), {licenses}",
+        )
+    if settings.lwc_csv is not None:
+        suggestions = suggest_lwcs(target, settings.lwc_csv)
+        if suggestions:
+            typer.echo(
+                "Likely LWCs: "
+                + ", ".join(f"{s.name} ({s.code}, {s.probability:.2f})" for s in suggestions)
+            )
+
+
+@app.command()
+def brief(
+    target: str = typer.Option(..., help="Target language, ISO 639-3."),
+    lwc: str = typer.Option(..., help="Language of Wider Communication, ISO 639-3."),
+    passage: str = typer.Option(..., help="Passage reference, e.g. 'MRK 1:6' or 'MRK 1:4-8'."),
+    exclude: list[str] | None = typer.Option(None, help="Languages to leave out."),
+    limit: int = typer.Option(5, help="Maximum related languages to consult."),
+    min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
+    as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
+) -> None:
+    """Show related-language resources for a passage, with provenance."""
+    try:
+        ref = PassageRef.parse(passage)
+    except ValueError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=2) from None
+    settings = Settings.from_env()
+    pipeline = build_pipeline(settings)
+    pipeline.max_languages = limit
+    pipeline.min_similarity = min_similarity
+    briefing = pipeline.brief(_context(target, lwc, exclude), ref)
+    if as_json:
+        typer.echo(json.dumps(to_jsonable(briefing), indent=2, ensure_ascii=False))
+        return
+
+    typer.echo(f"{ref} for {target}, read in {lwc}")
+    typer.echo("")
+    if briefing.nothing_found:
+        typer.echo(f"Related-language readings: none. {briefing.nothing_found.reason}")
+    for reading in briefing.readings:
+        lang = reading.language
+        typer.echo(f"== {lang.name} ({lang.code}, similarity {lang.similarity:.2f})")
+        typer.echo(reading.original.text)
+        typer.echo(f"   source: {_provenance_line(reading.original.provenance)}")
+        if isinstance(reading.in_lwc, Unavailable):
+            typer.echo(f"   in {lwc}: not available. {reading.in_lwc.reason}")
+        else:
+            typer.echo(f"   in {lwc}: {reading.in_lwc.text}")
+            typer.echo(f"   rendering: {reading.in_lwc.provenance.source}")
+        typer.echo("")
+    if briefing.skipped and not briefing.nothing_found:
+        typer.echo("Not shown: " + "; ".join(s.reason for s in briefing.skipped))
+        typer.echo("")
+    typer.echo("== Notes")
+    if briefing.no_notes:
+        typer.echo(f"None. {briefing.no_notes.reason}")
+    for note in briefing.notes:
+        typer.echo(f"-- {note.note.title} ({note.resource})")
+        if isinstance(note.in_lwc, Unavailable):
+            typer.echo(note.original.text)
+            typer.echo(f"   in {lwc}: not available. {note.in_lwc.reason}")
+        else:
+            typer.echo(note.in_lwc.text)
+            typer.echo(f"   rendering: {note.in_lwc.provenance.source}")
+        typer.echo(f"   source: {_provenance_line(note.original.provenance)}")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Interface to bind."),
+    port: int = typer.Option(8765, help="Port to listen on."),
+) -> None:
+    """Serve the demo UI (needs the 'demo' extra: uv sync --extra demo)."""
+    try:
+        import uvicorn  # noqa: PLC0415
+
+        from rlr.demo.server import create_app  # noqa: PLC0415
+    except ImportError:
+        typer.echo("The demo UI needs the 'demo' extra: uv sync --extra demo")
+        raise typer.Exit(code=1) from None
+    typer.echo(f"RLR demo at http://{host}:{port}  (first request downloads data)")
+    uvicorn.run(create_app(Settings.from_env()), host=host, port=port, log_level="warning")

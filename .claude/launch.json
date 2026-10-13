@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rlr-demo",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "rlr", "serve", "--port", "8765"],
+      "port": 8765
+    }
+  ]
+}

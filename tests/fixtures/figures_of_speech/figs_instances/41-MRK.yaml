@@ -1,0 +1,36 @@
+- id: '140949'
+  ref: MRK 1:2
+  type_id: figs-idiom
+  source_text: πρὸ προσώπου σου
+  translation: before your face
+  original_comment: 'Here, the phrase **before your face** means in front of the person. Alternate translation: [in front of you] or [before I send you]'
+  comments:
+  - comment: Here, the phrase before your face means in front of the person.
+    alternate_translations:
+    - in front of you
+    - before I send you
+- id: '140955'
+  ref: MRK 1:3
+  type_id: figs-metaphor
+  source_text: ἑτοιμάσατε τὴν ὁδὸν Κυρίου
+  translation: Make ready the way of the Lord
+  original_comment: 'Roads for the Lord. Alternate translation: [Live in a way that pleases God]'
+  comments:
+  - comment: Roads for the Lord.
+    alternate_translations:
+    - Live in a way that pleases God
+- id: '999'
+  ref: MRK 1:4-MRK 1:8
+  type_id: figs-metaphor
+  source_text: ''
+  translation: a range-wide note
+  original_comment: 'Spans several verses.'
+  comments:
+  - comment: Spans several verses.
+- id: '998'
+  ref: MRK 2:1
+  type_id: figs-unknown-type
+  source_text: ''
+  translation: ignored because its type is not in the catalog
+  original_comment: ''
+  comments: []

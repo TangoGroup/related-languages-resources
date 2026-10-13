@@ -1,0 +1,9 @@
+wbi 1:1
+wbi 1:2
+wbi 1:3
+wbi 1:4
+wbi 1:5
+wbi 1:6 nywele za ngamia
+wbi 1:7
+wbi 1:8
+wbi 2:1

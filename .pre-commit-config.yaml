@@ -1,0 +1,33 @@
+# Pre-commit hooks. Install once after cloning:
+#
+#     uv run pre-commit install
+#
+# Hooks then fire on every `git commit`. CI also enforces these checks
+# (plus mypy + pytest, which we keep out of the pre-commit loop because
+# they are too slow for an interactive gate).
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Preserve markdown hard-break (two trailing spaces) in *.md files.
+        args: [--markdown-linebreak-ext=md]
+        # TSV fixtures end rows with empty columns, which are trailing tabs.
+        exclude: '^tests/fixtures/.*\.tsv$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
