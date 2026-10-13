@@ -219,7 +219,7 @@ class CachedTranslator:
         """The live backend's name, or the pre-rendering backends' with a marker."""
         if isinstance(self.inner, NoTranslator):
             backends = self.cache.backends()
-            return f"{', '.join(sorted(backends))} (pre-rendered)" if backends else "none"
+            return f"{', '.join(sorted(backends))}, pre-rendered" if backends else "none"
         return self.inner.name
 
     def warm_up(self) -> None:

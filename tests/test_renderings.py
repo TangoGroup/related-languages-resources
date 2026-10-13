@@ -63,7 +63,7 @@ def test_cache_searches_directories_in_order(tmp_path):
 def test_cached_translator_over_no_backend(tmp_path):
     write_file(tmp_path / "swh.json.gz", _file({"Hello": "Jambo"}))
     t = CachedTranslator(NoTranslator(), RenderingCache([tmp_path]))
-    assert t.name == "madlad400-3b-mt (pre-rendered)"
+    assert t.name == "madlad400-3b-mt, pre-rendered"
     assert t.supports("eng", "swh")
     assert not t.supports("eng", "por")
     assert t.translate("Hello", "eng", "swh") == "Jambo"
