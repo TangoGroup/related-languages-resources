@@ -14,7 +14,7 @@ import typer
 from rlr.agent import build_pipeline
 from rlr.config import Settings
 from rlr.languages import suggest_lwcs
-from rlr.mt import NoTranslator, load_backend
+from rlr.mt import NoTranslator, load_backend, load_translator
 from rlr.renderings import (
     RenderingFile,
     bundled_dir,
@@ -242,5 +242,14 @@ def serve(
     except ImportError:
         typer.echo("The demo UI needs the 'demo' extra: uv sync --extra demo")
         raise typer.Exit(code=1) from None
-    typer.echo(f"RLR demo at http://{host}:{port}  (first request downloads data)")
-    uvicorn.run(create_app(Settings.from_env()), host=host, port=port, log_level="warning")
+    settings = Settings.from_env()
+    if settings.mt_backend.strip() not in ("", "none"):
+        typer.echo(
+            f"Loading the {settings.mt_backend} machine-translation model "
+            "(the first time this downloads about 11 GB)…"
+        )
+        warm = getattr(load_translator(settings), "warm_up", None)
+        if callable(warm):
+            warm()
+    typer.echo(f"RLR demo at http://{host}:{port}  (first request downloads language data)")
+    uvicorn.run(create_app(settings), host=host, port=port, log_level="warning")

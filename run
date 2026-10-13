@@ -5,6 +5,7 @@
 #   ./run brief ngq swh "MRK 1:3"     show a passage across related languages
 #   ./run languages ngq               list the closest languages with Scripture
 #   ./run check                       lint, typecheck, test
+#   RLR_MT=madlad ./run               the demo with live machine translation (in-process, no server)
 #
 # Needs bash, curl and git. Installs uv (https://astral.sh/uv) if it is missing;
 # everything else lives in ./.venv and ~/.cache/rlr. macOS and Linux.
@@ -24,7 +25,12 @@ ensure_uv() {
 
 ensure_package() {
     say "Installing RLR and its dependencies into ./.venv"
-    uv sync --extra dev --extra demo
+    # With RLR_MT set (e.g. RLR_MT=madlad) the live machine-translation
+    # backend is installed too: torch and transformers, a few GB.
+    case "${RLR_MT:-none}" in
+        none|"") uv sync --extra dev --extra demo ;;
+        *)       uv sync --extra dev --extra demo --extra mt ;;
+    esac
 }
 
 open_browser() {

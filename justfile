@@ -14,9 +14,14 @@ port := "8765"
 default:
     @just --list --unsorted
 
-# Install uv (if missing) and the package with the demo extra.
+# Install uv (if missing) and the package with the demo extra (plus `mt` when RLR_MT is set).
 setup: _uv
-    uv sync --extra dev --extra demo
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "${RLR_MT:-none}" in
+        none|"") uv sync --extra dev --extra demo ;;
+        *)       uv sync --extra dev --extra demo --extra mt ;;
+    esac
 
 # Run the demo UI on http://127.0.0.1:8765 and open a browser.
 demo: setup

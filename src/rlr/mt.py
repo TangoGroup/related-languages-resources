@@ -146,13 +146,20 @@ class MadladTranslator:
                 msg = "MADLAD backend needs the 'mt' extra: uv sync --extra mt"
                 raise RuntimeError(msg) from exc
             if self.device is None:
-                self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
+                self.device = pick_device(torch)
+            # bfloat16 everywhere: half the memory of float32 (about 6 GB for
+            # the 3B model), correct output on CUDA, Apple MPS and CPU, and
+            # unlike float16 it does not overflow T5's activations.
+            dtype = torch.bfloat16
             load_model: Any = T5ForConditionalGeneration.from_pretrained
             load_tokenizer: Any = AutoTokenizer.from_pretrained
             self._tokenizer = load_tokenizer(self.model_id)
             self._model = load_model(self.model_id, dtype=dtype).to(self.device).eval()
         return self._model, self._tokenizer
+
+    def warm_up(self) -> None:
+        """Download and load the model now rather than on the first request."""
+        self._load()
 
     def supports(self, source: LanguageCode, target: LanguageCode) -> bool:
         """Whether MADLAD was trained on both languages.
@@ -183,6 +190,16 @@ class MadladTranslator:
         return [d.strip() for d in decoded]
 
 
+def pick_device(torch: Any) -> str:
+    """CUDA, then Apple's MPS, then the CPU."""
+    if torch.cuda.is_available():
+        return "cuda"
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 class CachedTranslator:
     """Pre-rendered translations first, a live backend second.
 
@@ -203,6 +220,12 @@ class CachedTranslator:
             backends = self.cache.backends()
             return f"{', '.join(sorted(backends))} (pre-rendered)" if backends else "none"
         return self.inner.name
+
+    def warm_up(self) -> None:
+        """Load the live backend now, if it has anything to load."""
+        warm = getattr(self.inner, "warm_up", None)
+        if callable(warm):
+            warm()
 
     def supports(self, source: LanguageCode, target: LanguageCode) -> bool:
         """Whether renderings exist or the live backend can produce them."""

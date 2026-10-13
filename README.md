@@ -143,14 +143,14 @@ with the default `RLR_MT=none`.
 in-process; there is no server:
 
 ```bash
-uv sync --extra dev --extra demo --extra mt   # adds torch and transformers
-RLR_MT=madlad ./run                           # first use downloads the 11 GB model
+RLR_MT=madlad ./run    # installs torch and transformers, downloads the 11 GB model, starts the demo
 ```
 
 Stages 4 and 5 then render into any language MADLAD-400 covers (some 400);
 related languages it was not trained on are reported as unavailable rather
-than guessed. Budget about 6 GB of RAM with a GPU, 12 GB without, and a few
-seconds per sentence on a CPU.
+than guessed. It uses an NVIDIA GPU or Apple silicon when present and the CPU
+otherwise; budget about 6 GB of memory and, on a CPU, a few seconds per
+sentence, so a verse with three notes takes about a minute the first time.
 
 **Extending the pre-rendered set.** `rlr pretranslate --lwc ind --book ROM`
 renders a book's notes once with the live backend into your cache

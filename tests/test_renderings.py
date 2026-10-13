@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
-from rlr.agent import Pipeline
 from rlr.mt import CachedTranslator, NoTranslator, TranslationUnavailable
 from rlr.renderings import (
     RenderingCache,
@@ -110,13 +111,11 @@ def test_note_texts_collects_translatable_parts(figures):
     assert len(texts) == len(set(texts))
 
 
-def test_pipeline_renders_notes_from_the_cache(
-    settings, glottolog, corpus, index, figures, tmp_path
-):
+def test_pipeline_renders_notes_from_the_cache(pipeline, figures, tmp_path):
     f = _file({t: f"[sw] {t}" for t in note_texts(figures.notes_in("MRK"))})
     write_file(tmp_path / "r" / "swh.json.gz", f)
     translator = CachedTranslator(NoTranslator(), RenderingCache([tmp_path / "r"]))
-    p = Pipeline(settings, glottolog, corpus, index, translator, resources=(figures,))
+    p = replace(pipeline, translator=translator, resources=(figures,))
     briefing = p.brief(
         TranslationContext(target_language="ngq", lwc="swh"), PassageRef.parse("MRK 1:2")
     )
@@ -130,12 +129,9 @@ def test_pipeline_renders_notes_from_the_cache(
     # A passage whose note parts are not in the file is reported, not invented.
     f2 = _file({"nothing relevant": "x"})
     write_file(tmp_path / "r" / "swh.json.gz", f2)
-    p2 = Pipeline(
-        settings,
-        glottolog,
-        corpus,
-        index,
-        CachedTranslator(NoTranslator(), RenderingCache([tmp_path / "r"])),
+    p2 = replace(
+        pipeline,
+        translator=CachedTranslator(NoTranslator(), RenderingCache([tmp_path / "r"])),
         resources=(figures,),
     )
     b2 = p2.brief(TranslationContext(target_language="ngq", lwc="swh"), PassageRef.parse("MRK 1:2"))
