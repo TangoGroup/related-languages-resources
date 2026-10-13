@@ -193,13 +193,14 @@ class MadladTranslator:
         self, texts: Sequence[str], source: LanguageCode, target: LanguageCode
     ) -> list[str]:
         """Translate a batch in one padded generation (much faster on a GPU)."""
-        model, tokenizer = self._load()
-        tag = madlad_tag(target)
-        inputs = tokenizer([f"{tag} {t}" for t in texts], return_tensors="pt", padding=True).to(
-            self.device
-        )
-        outputs = model.generate(**inputs, max_new_tokens=self.max_new_tokens)
-        decoded: list[str] = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        with self._lock:
+            model, tokenizer = self._load_locked()
+            tag = madlad_tag(target)
+            inputs = tokenizer([f"{tag} {t}" for t in texts], return_tensors="pt", padding=True).to(
+                self.device
+            )
+            outputs = model.generate(**inputs, max_new_tokens=self.max_new_tokens)
+            decoded: list[str] = tokenizer.batch_decode(outputs, skip_special_tokens=True)
         return [d.strip() for d in decoded]
 
 

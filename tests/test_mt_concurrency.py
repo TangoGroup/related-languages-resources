@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from rlr.mt import MadladTranslator
 
 
-class _Inputs(dict):
+class _Inputs(dict[str, object]):
     def to(self, device: str) -> _Inputs:
         return self
 
