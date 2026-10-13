@@ -144,7 +144,7 @@ class MadladTranslator:
             load_model: Any = T5ForConditionalGeneration.from_pretrained
             load_tokenizer: Any = AutoTokenizer.from_pretrained
             self._tokenizer = load_tokenizer(self.model_id)
-            self._model = load_model(self.model_id, torch_dtype=dtype).to(self.device).eval()
+            self._model = load_model(self.model_id, dtype=dtype).to(self.device).eval()
         return self._model, self._tokenizer
 
     def supports(self, source: LanguageCode, target: LanguageCode) -> bool:

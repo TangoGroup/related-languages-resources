@@ -40,8 +40,8 @@ demo = [
     "uvicorn>=0.30",
 ]
 mt = [
-    # transformers 5 mis-loads MADLAD-400 (T5) embeddings and generates garbage; 4.x is correct.
-    "transformers>=4.44,<5",
+    # 5.17 generated garbage for MADLAD-400 (T5); 5.19 is correct and clears the 5.x advisories.
+    "transformers>=5.19",
     "torch>=2.3",
     "sentencepiece>=0.2",
 ]
