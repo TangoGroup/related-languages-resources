@@ -40,6 +40,13 @@ def the_query(s: Any) -> None:
     s.point("#target-name", 0.3, 0.5, steps=20)
 
 
+def the_lwc(s: Any) -> None:
+    s.scroll_to(".reading--lwc", offset=30)
+    s.point(".reading--lwc .reading__text", 0.2, 0.4, steps=36)
+    s.settle(3.0)
+    s.point(".reading--lwc .reading__prov", 0.2, 0.5, steps=30)
+
+
 def the_neighbourhood(s: Any) -> None:
     s.scroll_to(".constellation", offset=40)
     s.point("#map", 0.35, 0.45, steps=36)
@@ -50,42 +57,47 @@ def the_neighbourhood(s: Any) -> None:
 
 
 def the_readings(s: Any) -> None:
-    s.scroll_to(".reading", offset=30)
-    s.point(".reading .reading__text", 0.15, 0.4, steps=36)
+    s.scroll_to(".reading:not(.reading--lwc)", offset=30)
+    s.point(".reading:not(.reading--lwc) .reading__text", 0.15, 0.4, steps=36)
     s.settle(2.6)
-    s.point(".reading .similarity__bar", 0.5, 0.5, steps=30)
+    s.point(".reading:not(.reading--lwc) .similarity__bar", 0.5, 0.5, steps=30)
     s.settle(1.8)
-    s.point(".reading .reading__prov", 0.2, 0.5, steps=30)
+    s.point(".reading:not(.reading--lwc) .reading__prov", 0.2, 0.5, steps=30)
 
 
 def licenses(s: Any) -> None:
-    s.point(".reading .rendering__absent", 0.2, 0.5, steps=30)
-    s.settle(3.4)
-    s.point(".reading .badge", 0.5, 0.5, steps=20)
-    s.settle(1.4)
-    s.scroll_to(".reading:nth-of-type(2)", offset=30)
-    s.point(".reading:nth-of-type(2) .rendering__absent", 0.2, 0.5, steps=30)
+    s.scroll_to(".constellation", offset=40)
+    s.point("#ranking .badge", 0.5, 0.5, steps=30)
+    s.settle(2.4)
+    s.scroll_to(".reading:not(.reading--lwc)", offset=30)
+    s.point(".reading:not(.reading--lwc) .badge", 0.5, 0.5, steps=24)
 
 
 def the_notes(s: Any) -> None:
     s.scroll_to(".notes", offset=30)
     s.point(".note", 0.4, 0.25, steps=36)
-    s.settle(2.4)
-    s.point(".note .note__quote", 0.3, 0.5, steps=24)
+    s.settle(2.2)
+    s.point(".note .rendering__text", 0.3, 0.5, steps=24)
+    s.settle(2.6)
+    s.point(".notes__grid .note:nth-child(2) .rendering__text", 0.4, 0.4, steps=30)
     s.settle(2.0)
-    s.point(".notes__grid .note:nth-child(2)", 0.4, 0.3, steps=30)
-    s.settle(2.0)
-    s.point(".note .rendering__absent", 0.3, 0.5, steps=24)
+    s.point(".note .note__prov", 0.3, 0.5, steps=24)
 
 
-def another_verse(s: Any) -> None:
+def also_include(s: Any) -> None:
     s.scroll_top()
-    s.click("a[data-example='ngq|swh|MRK 1:6']")
+    s.type_into("input[name=include]", "lug")
+    s.settle(0.6)
+    s.click(".stamp")
     s.wait_for_briefing()
-    s.point(".passage-head__ref", 0.3, 0.5, steps=30)
+    s.settle(0.8)
+    s.scroll_to(".reading:not(.reading--lwc)", offset=30)
+    s.point(".similarity--selected", 0.5, 0.5, steps=30)
     s.settle(1.4)
-    s.scroll_to(".reading:nth-of-type(2)", offset=30)
-    s.point(".reading:nth-of-type(2) .reading__text", 0.2, 0.4, steps=30)
+    s.scroll_to(".constellation", offset=40)
+    s.point("#map .node--sel", 0.5, 0.5, steps=30)
+    s.settle(2.2)
+    s.page.fill("input[name=include]", "")
 
 
 def konongo(s: Any) -> None:
@@ -96,8 +108,9 @@ def konongo(s: Any) -> None:
     s.settle(1.2)
     s.scroll_to(".constellation", offset=40)
     s.point("#ranking", 0.5, 0.5, steps=30)
-    s.settle(2.2)
+    s.settle(2.0)
     s.scroll_to(".notes", offset=30)
+    s.point(".note .rendering__text", 0.3, 0.5, steps=24)
 
 
 def biafada(s: Any) -> None:
@@ -106,8 +119,8 @@ def biafada(s: Any) -> None:
     s.wait_for_briefing()
     s.point("#target-name", 0.3, 0.5, steps=24)
     s.settle(1.6)
-    s.scroll_to(".reading", offset=30)
-    s.point(".reading .rendering__absent", 0.2, 0.5, steps=30)
+    s.scroll_to(".reading:not(.reading--lwc)", offset=30)
+    s.point(".reading:not(.reading--lwc) .badge", 0.5, 0.5, steps=30)
     s.settle(2.4)
     s.scroll_to(".notes", offset=30)
 
@@ -126,7 +139,7 @@ SCENES: list[Scene] = [
         "A translator working on a verse rarely knows that the same verse already exists "
         "in a language next door to theirs; or where to find it; or whether they are "
         "allowed to use it. RLR finds it, shows it, and attaches the answers to all three "
-        "questions.",
+        "questions, in a language the translator reads.",
         intro,
     ),
     Scene(
@@ -138,12 +151,21 @@ SCENES: list[Scene] = [
         the_query,
     ),
     Scene(
+        "lwc",
+        "The first thing on the desk is the verse in the language the translator reads. "
+        "Swahili has an open Bible, Biblia Takatifu, in the public domain, so RLR shows "
+        "it before anything else. When the language of wider communication has an open "
+        "Bible of its own, there is nothing to machine-translate; the translator can "
+        "simply read it.",
+        the_lwc,
+    ),
+    Scene(
         "neighbourhood",
-        "RLR walks Glottolog's classification of the world's languages to find the closest "
-        "relatives that already have Scripture in the eBible Corpus. Each dot is a language "
-        "with a Bible, placed by its coordinates; the nearer to Ngoreme on the family tree, "
-        "the larger the dot. Suba, Kara, Isanzu, Pogolo, Ganda: all within a few hundred "
-        "kilometres, and all ranked by how closely they are related.",
+        "Next, the neighbourhood. RLR walks Glottolog's classification of the world's "
+        "languages to find the closest relatives that already have Scripture in the eBible "
+        "Corpus. Each dot is a language with a Bible, placed by its coordinates; the nearer "
+        "to Ngoreme on the family tree, the larger the dot. Suba, Kara, Isanzu, Pogolo, "
+        "Ganda: all within a few hundred kilometres, ranked by how closely they are related.",
         the_neighbourhood,
     ),
     Scene(
@@ -156,50 +178,52 @@ SCENES: list[Scene] = [
     ),
     Scene(
         "licenses",
-        "That license is not decoration. Suba's New Testament is licensed no-derivatives, so "
-        "RLR shows the text but declines to render it into Swahili, and says exactly why. "
-        "Kara's is Creative Commons Share-Alike, so a rendering is permitted; with no "
-        "translation model configured yet, RLR says that too. Absence is always reported. "
-        "It is never hidden behind an empty box.",
+        "The license is not decoration. Suba's New Testament is licensed no-derivatives, "
+        "so RLR may show the text but never machine-translate it, and the badge says so. "
+        "Kara's is Creative Commons Share-Alike, which permits a rendering. Every text "
+        "carries its terms with it, and the system never does anything a license forbids.",
         licenses,
     ),
     Scene(
         "notes",
         "The passage also has translation notes: unfoldingWord's figures of speech, which "
-        "exist only in English. RLR finds the ones for this verse. A voice standing for a "
-        "person. The metaphor of preparing a road. The Hebrew parallelism of the two lines. "
-        "Each with its Greek, its gloss, and alternate translations, ready to be rendered "
-        "into Swahili once the in-house models are wired in.",
+        "exist only in English. Here they are in Swahili. A voice standing for a person. "
+        "The metaphor of preparing a road. The Hebrew parallelism of the two lines. Each "
+        "with its Greek kept as written, its comment, and the alternate renderings. These "
+        "were translated once with an open model and ship with the software, so nothing "
+        "runs on this machine, and the provenance says exactly where they came from.",
         the_notes,
     ),
     Scene(
-        "another-verse",
-        "Change the verse, and the whole desk changes with it. Mark one, verse six: John's "
-        "clothing of camel hair, and the leather belt around his waist, in five "
-        "neighbouring languages.",
-        another_verse,
+        "include",
+        "The tree is a guess about what might help. The translator knows better. Say they "
+        "read Ganda: type it into Also include, and Ganda joins the desk at the top, marked "
+        "as selected rather than scored, and takes its place on the map in ochre.",
+        also_include,
+        pad=2.0,
     ),
     Scene(
         "konongo",
         "Or change the language. Konongo, another Bantu language of Tanzania. Isanzu, "
-        "Pogolo, Vwanji, Kinga, Kisi: five relatives with "
-        "open licenses, and three figures of speech waiting on the second verse of Mark.",
+        "Pogolo, Vwanji, Kinga, Kisi: five relatives with open licenses, and three figures "
+        "of speech on the second verse of Mark, already in Swahili.",
         konongo,
     ),
     Scene(
         "biafada",
         "And when the data is thin, RLR is honest about it. For Biafada, in Guinea-Bissau, "
-        "the nearest Scripture is in Mankanya, Pular, Wolof and Fulfulde, under licenses "
-        "that permit display but not rendering. The notes have nothing for this verse, and "
-        "the page says so, rather than pretending.",
+        "Portuguese has an open Bible, so that leads. The nearest Scripture is in Mankanya, "
+        "Pular, Wolof and Fulfulde, under licenses that permit display only. The notes have "
+        "nothing for this verse, and the page says so, rather than pretending.",
         biafada,
     ),
     Scene(
         "closing",
         "Everything you have seen is retrieval with a paper trail. Texts from the eBible "
-        "Corpus, under their own licenses. Notes from unfoldingWord. Classification from "
-        "Glottolog. Nothing is invented, and nothing is shown without its source. Related "
-        "Languages Resources: what already exists, next door.",
+        "Corpus, under their own licenses. Notes from unfoldingWord, rendered once with an "
+        "open model and shipped as data. Classification from Glottolog. Nothing is "
+        "invented, and nothing is shown without its source. Related Languages Resources: "
+        "what already exists, next door.",
         closing,
         pad=1.0,
     ),
