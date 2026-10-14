@@ -26,7 +26,14 @@ from rlr.renderings import (
 )
 from rlr.resources.figures_of_speech import LICENSE_NAME, SOURCE_NAME, FiguresOfSpeech
 from rlr.serialize import to_jsonable
-from rlr.types import PassageRef, PassageText, Provenance, TranslationContext, Unavailable
+from rlr.types import (
+    PassageRef,
+    PassageText,
+    Provenance,
+    TranslationContext,
+    Unavailable,
+    normalize_code,
+)
 
 app = typer.Typer(
     name="rlr",
@@ -190,6 +197,7 @@ def pretranslate(
     out: Path | None = typer.Option(None, help="Explicit output file (<lwc>.json.gz)."),
 ) -> None:
     """Render the figures-of-speech notes into an LWC once, so the demo needs no model."""
+    lwc = normalize_code(lwc)
     settings = Settings.from_env()
     backend = load_backend(settings)
     if isinstance(backend, NoTranslator):

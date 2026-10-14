@@ -21,6 +21,20 @@ from enum import Enum
 # emit it (e.g. "ful_Latn"). Stage functions normalise to the bare code.
 LanguageCode = str
 
+
+def normalize_code(code: str) -> LanguageCode:
+    """Canonical spelling of a language code typed by a person.
+
+    ISO 639-3 codes are lower case and script subtags are title case
+    (``ful_Latn``); people type ``SWH`` or ``Swh``. Input is normalised
+    once, here, so every lookup downstream can compare codes as-is.
+    """
+    bare, _, script = code.strip().partition("_")
+    if not script:
+        return bare.lower()
+    return f"{bare.lower()}_{script.capitalize()}"
+
+
 _REF_RE = re.compile(r"^\s*([1-4]?[A-Z]{2,3})\s+(\d+):(\d+)\s*$")
 _RANGE_RE = re.compile(
     r"^\s*([1-4]?[A-Z]{2,3})\s+(\d+):(\d+)\s*-\s*(?:(\d+):)?(\d+)\s*$",
@@ -47,6 +61,18 @@ class TranslationContext:
     #: Languages the translator says they know, to consult whether or not the
     #: tree says they are related (review feedback, 2026-10-13).
     included_languages: frozenset[LanguageCode] = field(default_factory=frozenset)
+
+    def __post_init__(self) -> None:
+        # Codes arrive from the CLI and the web form in whatever case the
+        # reader typed (an upper-case LWC was a reported toe-stub).
+        object.__setattr__(self, "target_language", normalize_code(self.target_language))
+        object.__setattr__(self, "lwc", normalize_code(self.lwc))
+        object.__setattr__(
+            self, "excluded_languages", frozenset(map(normalize_code, self.excluded_languages))
+        )
+        object.__setattr__(
+            self, "included_languages", frozenset(map(normalize_code, self.included_languages))
+        )
 
 
 @dataclass(frozen=True, slots=True)

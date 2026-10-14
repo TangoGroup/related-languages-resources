@@ -86,3 +86,17 @@ def test_brief_honours_inclusions(client: TestClient) -> None:
         "/api/languages", params={"target": "ngq", "include": "zga", "min_similarity": "0.99"}
     ).json()
     assert [x["code"] for x in langs["related"]] == ["zga"]
+
+
+def test_brief_accepts_upper_case_language_codes(client: TestClient) -> None:
+    # Reported 2026-10-13: an upper-case LWC code found no Bible.
+    r = client.get("/api/brief", params={"target": "NGQ", "lwc": "SWH", "passage": "mrk 1:6"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["lwc_reading"]["language"] == "swh"
+    assert body["lwc_reading"]["text"].startswith("swh 1:6")
+    assert body["lwc_info"]["code"] == "swh"
+    assert body["readings"][0]["in_lwc"] is None
+    langs = client.get("/api/languages", params={"target": "NGQ", "lwc": "SWH", "include": "ZGA"})
+    assert langs.status_code == 200, langs.text
+    assert any(row["code"] == "zga" and row["requested"] for row in langs.json()["related"])
