@@ -1,0 +1,138 @@
+"""The composed pipeline: provenance everywhere, absence always explained."""
+
+from __future__ import annotations
+
+from rlr.agent import Pipeline
+from rlr.types import PassageRef, PassageText, TranslationContext, Unavailable
+
+
+def test_brief_without_translation_backend(pipeline):
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:6"))
+
+    assert briefing.nothing_found is None
+    assert [r.language.code for r in briefing.readings] == ["reg", "wbi"]
+    assert isinstance(briefing.lwc_reading, PassageText)
+    assert briefing.lwc_reading.language == "swh"
+    assert briefing.lwc_reading.text.startswith("swh 1:6")
+    kara = briefing.readings[0]
+    assert kara.original.text == "reg 1:6 camel hair"
+    assert kara.original.provenance.license_name == "CC BY-SA 4.0"
+    # Swahili has an open Bible, so no back-translation is attempted.
+    assert kara.in_lwc is None
+    # The LWC is shown once, up front, never again as a "related" reading.
+    assert "swh" not in [r.language.code for r in briefing.readings]
+    assert briefing.lwc_reading.provenance.publisher == "unfoldingWord"
+    # Kinga has no MRK 1:6, so it is skipped with a reason rather than dropped.
+    assert any("zgam has no text for MRK 1:6" in s.reason for s in briefing.skipped)
+    # The fixture's range note (MRK 1:4-8) overlaps 1:6, so stage 5 has one hit.
+    assert briefing.no_notes is None
+    assert [n.note.note_id for n in briefing.notes] == ["999"]
+
+    empty = pipeline.brief(ctx, PassageRef.parse("MRK 1:1"))
+    assert empty.notes == ()
+    assert empty.no_notes is not None
+    assert "no notes for MRK 1:1" in empty.no_notes.reason
+
+
+def test_back_translation_runs_only_without_an_open_lwc_bible(translating_pipeline):
+    # English has no Bible in the fixture corpus, so stage 4 runs.
+    ctx = TranslationContext(target_language="ngq", lwc="eng")
+    briefing = translating_pipeline.brief(ctx, PassageRef.parse("MRK 1:2-3"))
+    assert isinstance(briefing.lwc_reading, Unavailable)
+
+    by_code = {r.language.code: r for r in briefing.readings}
+    kara = by_code["reg"]
+    assert kara.in_lwc.text == "[reg->eng] reg 1:2 reg 1:3"
+    assert kara.in_lwc.derived_from is kara.original
+    assert kara.in_lwc.provenance.source.startswith("machine back-translation (fake)")
+    assert kara.in_lwc.provenance.license_name == "CC BY-SA 4.0"
+    vwanji = by_code["wbi"]
+    assert isinstance(vwanji.in_lwc, Unavailable)
+    assert "does not permit derivative works" in vwanji.in_lwc.reason
+    # Notes are already in English: shown as they are.
+    assert briefing.notes[0].in_lwc is briefing.notes[0].original
+
+
+def test_requested_languages_bypass_the_threshold(pipeline):
+    ctx = TranslationContext(
+        target_language="ngq", lwc="swh", included_languages=frozenset({"zga"})
+    )
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:2"))
+    codes = [r.language.code for r in briefing.readings]
+    assert codes[0] == "zga"
+    assert briefing.readings[0].language.requested
+    assert all(not r.language.requested for r in briefing.readings[1:])
+    # A requested language with no Bible is reported, not silently dropped.
+    ctx2 = TranslationContext(
+        target_language="ngq", lwc="swh", included_languages=frozenset({"xyz"})
+    )
+    briefing2 = pipeline.brief(ctx2, PassageRef.parse("MRK 1:2"))
+    assert any("xyz was requested but has no Bible" in s.reason for s in briefing2.skipped)
+
+
+def test_notes_render_into_the_lwc(translating_pipeline):
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = translating_pipeline.brief(ctx, PassageRef.parse("MRK 1:2-3"))
+    assert all(r.in_lwc is None for r in briefing.readings)
+
+    assert briefing.no_notes is None
+    titles = [n.note.title for n in briefing.notes]
+    assert titles == ["Idiom", "Metaphor"]
+    idiom = briefing.notes[0]
+    assert idiom.original.language == "eng"
+    assert idiom.in_lwc.language == "swh"
+    assert idiom.in_lwc.text.startswith("[eng->swh] Idiom:")
+    # Rendered part by part: the quoted source text stays verbatim, each
+    # alternative is translated on its own, and the label is translated too.
+    lines = idiom.in_lwc.text.split("\n")
+    assert lines[1] == "“before your face” (πρὸ προσώπου σου)"
+    assert lines[2].startswith("[eng->swh] Here, the phrase")
+    assert lines[3] == (
+        "[eng->swh] Alternate translation: [eng->swh] in front of you; [eng->swh] before I send you"
+    )
+    assert idiom.in_lwc.derived_from is idiom.original
+    assert idiom.in_lwc.provenance.publisher == "unfoldingWord"
+
+
+def test_notes_in_lwc_are_unavailable_without_backend(pipeline):
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:2"))
+    (idiom,) = briefing.notes
+    assert isinstance(idiom.in_lwc, Unavailable)
+    assert "no machine translation from eng into swh" in idiom.in_lwc.reason
+
+
+def test_notes_already_in_lwc_pass_through(pipeline):
+    ctx = TranslationContext(target_language="ngq", lwc="eng")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:2"))
+    (idiom,) = briefing.notes
+    assert idiom.in_lwc is idiom.original
+
+
+def test_unknown_target_reports_nothing_found(pipeline):
+    ctx = TranslationContext(target_language="zzz", lwc="swh")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:6"))
+    assert briefing.readings == ()
+    assert briefing.nothing_found is not None
+    assert "zzz" in briefing.nothing_found.reason
+
+
+def test_no_related_language_reports_threshold(pipeline):
+    pipeline.min_similarity = 0.99
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:6"))
+    assert briefing.related == ()
+    assert briefing.nothing_found is not None
+    assert "0.99" in briefing.nothing_found.reason
+
+
+def test_no_resources_is_reported(settings, glottolog, corpus, index):
+    from rlr.mt import NoTranslator
+
+    pipeline = Pipeline(settings, glottolog, corpus, index, NoTranslator())
+    ctx = TranslationContext(target_language="ngq", lwc="swh")
+    briefing = pipeline.brief(ctx, PassageRef.parse("MRK 1:6"))
+    assert briefing.notes == ()
+    assert briefing.no_notes is not None
+    assert "no verse-indexed resources" in briefing.no_notes.reason

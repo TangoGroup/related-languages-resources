@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Related Languages Resources — clone and play.
+#
+#   ./run            install what is missing, start the demo UI, open a browser
+#   ./run brief ngq swh "MRK 1:3"     show a passage across related languages
+#   ./run languages ngq               list the closest languages with Scripture
+#   ./run check                       lint, typecheck, test
+#   RLR_MT=madlad ./run               the demo with live machine translation (in-process, no server)
+#
+# Needs bash, curl and git. Installs uv (https://astral.sh/uv) if it is missing;
+# everything else lives in ./.venv and ~/.cache/rlr. macOS and Linux.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+PORT="${PORT:-8765}"
+say() { printf '\033[1m▸ %s\033[0m\n' "$*"; }
+
+ensure_uv() {
+    if command -v uv >/dev/null 2>&1; then return; fi
+    say "Installing uv, the Python package manager RLR uses"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+    command -v uv >/dev/null 2>&1 || { echo "uv did not install; see https://astral.sh/uv" >&2; exit 1; }
+}
+
+ensure_package() {
+    say "Installing RLR and its dependencies into ./.venv"
+    # With RLR_MT set (e.g. RLR_MT=madlad) the live machine-translation
+    # backend is installed too: torch and transformers, a few GB.
+    case "${RLR_MT:-none}" in
+        none|"") uv sync --extra dev --extra demo ;;
+        *)       uv sync --extra dev --extra demo --extra mt ;;
+    esac
+}
+
+open_browser() {
+    local url="http://127.0.0.1:$PORT"
+    ( sleep 2
+      if command -v xdg-open >/dev/null 2>&1; then xdg-open "$url"
+      elif command -v open >/dev/null 2>&1; then open "$url"
+      fi ) >/dev/null 2>&1 &
+}
+
+cmd="${1:-demo}"; shift || true
+case "$cmd" in
+    demo)
+        ensure_uv; ensure_package
+        say "Starting the demo at http://127.0.0.1:$PORT (first run downloads about 35 MB of language data)"
+        open_browser
+        exec uv run rlr serve --port "$PORT"
+        ;;
+    brief)
+        [ $# -eq 3 ] || { echo 'usage: ./run brief <target> <lwc> "<passage>"   e.g. ./run brief ngq swh "MRK 1:3"' >&2; exit 2; }
+        ensure_uv; ensure_package
+        exec uv run rlr brief --target "$1" --lwc "$2" --passage "$3"
+        ;;
+    languages)
+        [ $# -ge 1 ] || { echo 'usage: ./run languages <target>   e.g. ./run languages ngq' >&2; exit 2; }
+        ensure_uv; ensure_package
+        exec uv run rlr languages --target "$1" "${@:2}"
+        ;;
+    check)
+        ensure_uv; ensure_package
+        uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest -q
+        ;;
+    setup)
+        ensure_uv; ensure_package
+        say "Ready. Run ./run to start the demo."
+        ;;
+    -h|--help|help)
+        sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+        ;;
+    *)
+        echo "unknown command: $cmd (try ./run help)" >&2; exit 2
+        ;;
+esac

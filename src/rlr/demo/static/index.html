@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Related Languages Resources</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Literata:ital,opsz,wght@0,7..72,400..600;1,7..72,400..600&family=Azeret+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="masthead__rule"></div>
+  <div class="masthead__row">
+    <h1 class="masthead__title">Related <em>Languages</em> Resources</h1>
+    <p class="masthead__dek">What already exists in the languages next door to yours, with its provenance attached.</p>
+  </div>
+  <div class="masthead__meta" id="status">loading corpus…</div>
+</header>
+
+<main class="desk">
+  <aside class="card-catalog">
+    <form id="query" class="index-card" autocomplete="off">
+      <div class="index-card__tab">Query</div>
+      <label class="field">
+        <span class="field__label">Target language <small>ISO 639-3</small></span>
+        <input name="target" value="ngq" spellcheck="false" required>
+        <span class="field__hint" id="target-name"></span>
+      </label>
+      <label class="field">
+        <span class="field__label">Read it in <small>LWC</small></span>
+        <input name="lwc" value="swh" spellcheck="false" required>
+        <span class="field__hint" id="lwc-name"></span>
+      </label>
+      <label class="field">
+        <span class="field__label">Passage <small>verse or range</small></span>
+        <input name="passage" value="MRK 1:3" spellcheck="false" required>
+      </label>
+      <div class="field field--row">
+        <label class="field__inline">
+          <span class="field__label">Languages</span>
+          <input name="limit" type="number" min="1" max="20" value="5">
+        </label>
+        <label class="field__inline">
+          <span class="field__label">Min. similarity</span>
+          <input name="min_similarity" type="number" min="0" max="1" step="0.05" value="0.5">
+        </label>
+      </div>
+      <label class="field">
+        <span class="field__label">Also include <small>languages you know</small></span>
+        <input name="include" placeholder="e.g. lug" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="field__label">Leave out <small>comma-separated</small></span>
+        <input name="exclude" placeholder="e.g. sxb" spellcheck="false">
+      </label>
+      <button class="stamp" type="submit"><span>Consult</span></button>
+      <p class="index-card__foot">Examples: <a href="#" data-example="ngq|swh|MRK 1:3">Ngoreme · Swahili</a> · <a href="#" data-example="ngq|swh|MRK 1:6">John's garments</a> · <a href="#" data-example="kcz|swh|MRK 1:2">Konongo · Swahili</a> · <a href="#" data-example="gug|spa|LUK 2:7">Guarani · Spanish</a></p>
+    </form>
+
+    <section class="constellation" aria-labelledby="map-title">
+      <h2 class="section-title" id="map-title">The neighbourhood</h2>
+      <p class="section-dek" id="map-dek">Related languages with a Bible in the eBible Corpus, placed by their Glottolog coordinates. Languages you select are shown in ochre.</p>
+      <svg id="map" viewBox="0 0 420 320" role="img" aria-label="Map of related languages"></svg>
+      <ol class="ranking" id="ranking"></ol>
+    </section>
+  </aside>
+
+  <section class="folio" id="folio">
+    <div class="folio__empty" id="empty">
+      <p class="folio__empty-mark">¶</p>
+      <p>Choose a target language, the language you read, and a passage.<br>RLR will find the nearest languages that already have Scripture, show you the verse in each, render it where the license and the models allow, and say plainly when they don't.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="colophon">
+  <span>Open QA Initiative · Gloo / Mission Mutual / ETEN</span>
+  <span>Texts from the eBible Corpus under their own licenses · Notes © unfoldingWord CC BY-SA 4.0 · Classification © Glottolog CC BY 4.0</span>
+</footer>
+
+<template id="reading-tpl">
+  <article class="reading">
+    <header class="reading__head">
+      <div class="reading__rank"></div>
+      <div>
+        <h3 class="reading__lang"></h3>
+        <p class="reading__kin"></p>
+      </div>
+      <div class="similarity" title="Glottolog classification-path overlap">
+        <span class="similarity__value"></span>
+        <span class="similarity__bar"><i></i></span>
+      </div>
+    </header>
+    <p class="reading__text"></p>
+    <div class="rendering"></div>
+    <footer class="reading__prov"></footer>
+  </article>
+</template>
+
+<template id="note-tpl">
+  <article class="note">
+    <div class="note__rule"></div>
+    <h4 class="note__title"></h4>
+    <p class="note__quote"></p>
+    <p class="note__body"></p>
+    <div class="note__rendering"></div>
+    <footer class="note__prov"></footer>
+  </article>
+</template>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

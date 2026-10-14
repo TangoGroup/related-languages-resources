@@ -1,0 +1,9 @@
+zga 1:1
+zga 1:2
+zga 1:3
+zga 1:4
+zga 1:5
+
+zga 1:7
+zga 1:8
+zga 2:1
