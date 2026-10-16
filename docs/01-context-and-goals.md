@@ -38,12 +38,14 @@ language. It combines several functions:
 3. For those Bibles, given a particular verse of interest, return the
    corresponding texts for that verse, as examples of how the verse might be
    translated.
-4. Back-translate those corresponding texts into the LWC for easier
-   understanding, where back-translation capability exists for the LWC.
-5. Translate selected other resources that are indexed by verse but available
+4. Translate selected other resources that are indexed by verse but available
    only in English into the LWC, where English→LWC machine translation exists.
    For this prototype, figures-of-speech data from unfoldingWord is the example
    dataset.
+5. Back-translate corresponding texts in a related language into the
+   LWC for easier understanding, where back-translation capability
+   exists for the LWC. This capability is not yet included in the
+   current MVP. 
 
 ## Scope
 
