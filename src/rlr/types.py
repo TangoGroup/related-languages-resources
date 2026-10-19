@@ -78,9 +78,12 @@ class TranslationContext:
 class RelatedLanguage:
     """A language identified as closely related to the target language.
 
-    ``similarity`` is the Glottolog classification-path overlap used by
+    ``path_similarity`` is the Glottolog classification-path overlap used by
     the language-similarity measure: the fraction of the shorter path shared
     with the target, so 1.0 is the same language and 0.0 a different family.
+    ``similarity`` is the score the language was ranked by: by default that
+    overlap damped by geographic distance (``langfamilysim``'s ``combined``
+    score), or the overlap itself under ``RLR_SIMILARITY=path``.
     ``shared_country`` records the areal signal separately, since a neighbour
     across a family boundary can still be a useful Language of Wider
     Communication.
@@ -94,6 +97,8 @@ class RelatedLanguage:
     #: Great-circle distance between the Glottolog points, when both are known.
     distance_km: float | None = None
     location: Location | None = None
+    #: The undamped tree score (path overlap, or the areal score).
+    path_similarity: float | None = None
     #: True when the translator asked for this language rather than the tree
     #: proposing it; such languages bypass the similarity threshold.
     requested: bool = False

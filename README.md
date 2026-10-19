@@ -173,10 +173,14 @@ survey in [`docs/04-data-sources.md`](docs/04-data-sources.md).
 CLDF export (two CSV files, no clone of the 1 GB repository) and cached as JSON.
 Two languages score by the overlap of their classification paths (after Sean
 Boisen's language-similarity measure), with a flat areal score for
-cross-family neighbours that share a country. The
-candidate set is the languages that have a text in the eBible Corpus, so stages
-1 and 2 answer one question between them. For Ngoreme (`ngq`) the top eBible
-relatives are Suba 0.85, Kara 0.83, Isanzu and Pogolo 0.78, Ganda 0.75.
+cross-family neighbours that share a country. Candidates are ranked by that
+score damped by geographic distance, the `combined` score of Sean's
+[langfamilysim](https://pypi.org/project/langfamilysim/), computed per pair
+from the same Glottolog coordinates (`RLR_SIMILARITY=path` ranks by the tree
+score alone). The candidate set is the languages that have a text in the
+eBible Corpus, so stages 1 and 2 answer one question between them. For
+Ngoreme (`ngq`) the top eBible relatives are Suba 0.81, Kara 0.79, Isanzu
+0.72, Kikuyu and Ganda 0.66.
 
 **Finding and retrieving Bibles.** The **eBible Corpus** has 1079 texts,
 one-verse-per-line, aligned to a canonical verse list in `vref.txt`, with a

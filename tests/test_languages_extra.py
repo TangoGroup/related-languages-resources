@@ -35,19 +35,29 @@ def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     monkeypatch.setenv("RLR_LWC_CSV", str(tmp_path / "lwc.csv"))
     monkeypatch.setenv("RLR_MT", "madlad")
     monkeypatch.setenv("RLR_OFFLINE", "1")
+    monkeypatch.setenv("RLR_SIMILARITY", " Path ")
     s = Settings.from_env()
     assert s.cache_dir == tmp_path / "c"
     assert s.figures_dir == tmp_path / "figs"
     assert s.lwc_csv == tmp_path / "lwc.csv"
     assert s.mt_backend == "madlad"
     assert s.offline
+    assert s.similarity == "path"
 
 
 def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    for var in ("RLR_CACHE_DIR", "RLR_FIGURES_DIR", "RLR_LWC_CSV", "RLR_MT", "RLR_OFFLINE"):
+    for var in (
+        "RLR_CACHE_DIR",
+        "RLR_FIGURES_DIR",
+        "RLR_LWC_CSV",
+        "RLR_MT",
+        "RLR_OFFLINE",
+        "RLR_SIMILARITY",
+    ):
         monkeypatch.delenv(var, raising=False)
     s = Settings.from_env()
     assert s.cache_dir.name == "rlr"
     assert s.figures_dir is None
     assert s.mt_backend == "none"
     assert not s.offline
+    assert s.similarity == "combined"

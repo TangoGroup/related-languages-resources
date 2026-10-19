@@ -164,8 +164,9 @@ SCENES: list[Scene] = [
         "Next, the neighbourhood. RLR walks Glottolog's classification of the world's "
         "languages to find the closest relatives that already have Scripture in the eBible "
         "Corpus. Each dot is a language with a Bible, placed by its coordinates; the nearer "
-        "to Ngoreme on the family tree, the larger the dot. Suba, Kara, Isanzu, Pogolo, "
-        "Ganda: all within a few hundred kilometres, ranked by how closely they are related.",
+        "to Ngoreme on the family tree, the larger the dot. Suba, Kara, Isanzu, Kikuyu, "
+        "Ganda: all within a few hundred kilometres, ranked by how closely they are related "
+        "and how near they are.",
         the_neighbourhood,
     ),
     Scene(

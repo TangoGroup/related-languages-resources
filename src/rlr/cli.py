@@ -73,7 +73,9 @@ def languages(
         None, help="Languages you know; consulted whether or not they are related."
     ),
     limit: int = typer.Option(10, help="Maximum languages to list."),
-    min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
+    min_similarity: float = typer.Option(
+        0.5, help="Minimum Glottolog tree score (path overlap or areal)."
+    ),
     as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
 ) -> None:
     """List the languages with eBible texts that RLR considers related to the target."""
@@ -96,8 +98,13 @@ def languages(
         licenses = ", ".join(sorted({e.provenance.license_name or "unknown" for e in editions}))
         flags = " (shared country)" if lang.shared_country else ""
         km = f", {lang.distance_km} km" if lang.distance_km is not None else ""
+        tree = (
+            f", tree {lang.path_similarity:.2f}"
+            if lang.path_similarity not in (None, lang.similarity)
+            else ""
+        )
         typer.echo(
-            f"{lang.similarity:.2f}  {lang.code:5s} {lang.name}{flags}{km}: "
+            f"{lang.similarity:.2f}  {lang.code:5s} {lang.name}{flags}{km}{tree}: "
             f"{len(editions)} edition(s), {licenses}",
         )
     if settings.lwc_csv is not None:
@@ -131,7 +138,9 @@ def brief(
         None, help="Languages you know; consulted whether or not they are related."
     ),
     limit: int = typer.Option(5, help="Maximum related languages to consult."),
-    min_similarity: float = typer.Option(0.5, help="Minimum Glottolog path similarity."),
+    min_similarity: float = typer.Option(
+        0.5, help="Minimum Glottolog tree score (path overlap or areal)."
+    ),
     as_json: bool = typer.Option(False, "--json", help="Emit JSON."),
 ) -> None:
     """Show related-language resources for a passage, with provenance."""
