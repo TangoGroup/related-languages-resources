@@ -25,6 +25,9 @@ service share one source of truth:
 ``RLR_MT``
     Machine-translation backend: ``none`` (default) or ``madlad`` /
     ``madlad:<model-id>``. See :mod:`rlr.mt`.
+``RLR_SIMILARITY``
+    How stage 1 ranks related languages: ``combined`` (default; the tree
+    score damped by geographic distance) or ``path`` (the tree score alone).
 ``RLR_MT_DEVICE``
     Force the device for the live backend (``cuda``, ``mps`` or ``cpu``);
     unset, the best available is picked.
@@ -54,6 +57,8 @@ class Settings:
     renderings_dir: Path | None = None
     lwc_csv: Path | None = None
     mt_backend: str = "none"
+    #: Stage 1 ranking, ``"combined"`` or ``"path"`` (see :mod:`rlr.languages`).
+    similarity: str = "combined"
     #: Skip network access entirely; missing files raise instead of download.
     offline: bool = False
 
@@ -70,6 +75,7 @@ class Settings:
             renderings_dir=Path(renderings).expanduser() if renderings else None,
             lwc_csv=Path(lwc).expanduser() if lwc else None,
             mt_backend=os.environ.get("RLR_MT", "none"),
+            similarity=os.environ.get("RLR_SIMILARITY", "combined").strip().lower(),
             offline=os.environ.get("RLR_OFFLINE", "") not in ("", "0", "false"),
         )
 

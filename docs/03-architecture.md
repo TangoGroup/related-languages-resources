@@ -40,15 +40,31 @@ model supports is closest) and is not used.
 The score is computed in-repo over Glottolog's CLDF export (`languages.csv` and the `classification` parameter in
 `values.csv`), so no Glottolog clone is needed. The candidate set is the
 languages that have a text in the eBible Corpus, which means stages 1 and 2
-answer one question between them. A known caveat: the measure is not
-strongly geographic. Glottolog coordinates give a distance that is reported
-alongside the score, and an optional LWC table (probability that a speaker of
+answer one question between them.
+
+The tree score is not geographic on its own: Spanish's nearest relative by
+path overlap is Chavacano, 12,000 km away. Candidates are therefore ranked by
+the tree score damped by the distance between the two Glottolog points,
+langfamilysim's `combined` score:
+
+    combined = score * (floor + (1 - floor) * exp(-distance_km / 2000))
+
+with a floor of 0.3 for genealogical relatives (families spread by migration
+keep at least 30% of their score) and 0 for areal, same-country pairs. A pair
+missing coordinates keeps its tree score. langfamilysim precomputes this over
+every Glottolog pair into an `edges.csv` too large to ship; RLR computes it
+for the few hundred eBible candidates at query time, from data it already
+has. `min_similarity` still applies to the tree score, so the geographic term
+reorders candidates and never removes them. `RLR_SIMILARITY=path` restores the
+undamped ranking. Each result reports both scores and the distance. An
+optional LWC table (probability that a speaker of
 A also speaks LWC B) is exposed through `rlr.languages.suggest_lwcs` when an
 `lwc.csv` is available.
 
 Quality is unevaluated (see
 [07-limitations-and-future-work.md](07-limitations-and-future-work.md)). For Ngoreme (`ngq`) the top eBible relatives are
-Suba 0.85, Kara 0.83, Isanzu and Pogolo 0.78, Ganda 0.75.
+Suba 0.81, Kara 0.79, Isanzu 0.72, Kikuyu and Ganda 0.66 (tree scores 0.85,
+0.83, 0.78, 0.73, 0.75); Pogolo, 790 km away, drops from fourth to sixth.
 
 ## Stage 2 — Finding Bibles in related languages
 

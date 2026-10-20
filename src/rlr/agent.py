@@ -119,6 +119,7 @@ class Pipeline:
             self.corpus.languages,
             min_similarity=self.min_similarity,
             limit=self.max_languages,
+            scoring=languages.parse_scoring(self.settings.similarity),
         )
 
     def lwc_reading(
@@ -289,6 +290,7 @@ class Pipeline:
 
 def build_pipeline(settings: Settings) -> Pipeline:
     """Assemble a :class:`Pipeline` from settings, fetching data as needed."""
+    languages.parse_scoring(settings.similarity)  # fail before any download
     resources: list[VerseIndexedResource] = [FiguresOfSpeech(settings.figures_dir)]
     return Pipeline(
         settings=settings,

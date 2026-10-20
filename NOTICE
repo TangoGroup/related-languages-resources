@@ -3,6 +3,9 @@ Copyright (c) 2026 Gloo, LLC
 
 RLR's code is licensed under the MIT License; see LICENSE.
 
+The geographic damping in src/rlr/glottolog.py follows the combined score of
+langfamilysim (Sean Boisen, Apache-2.0, https://pypi.org/project/langfamilysim/).
+
 Third-party data
 ----------------
 RLR reads from third-party corpora and resource catalogues at run time

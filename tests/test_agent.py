@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from rlr.agent import Pipeline
 from rlr.types import PassageRef, PassageText, TranslationContext, Unavailable
 
@@ -136,3 +138,11 @@ def test_no_resources_is_reported(settings, glottolog, corpus, index):
     assert briefing.notes == ()
     assert briefing.no_notes is not None
     assert "no verse-indexed resources" in briefing.no_notes.reason
+
+
+def test_build_pipeline_rejects_unknown_similarity_before_loading(tmp_path):
+    from rlr.agent import build_pipeline
+    from rlr.config import Settings
+
+    with pytest.raises(ValueError, match="similarity scoring"):
+        build_pipeline(Settings(cache_dir=tmp_path, offline=True, similarity="geo"))

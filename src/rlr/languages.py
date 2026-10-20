@@ -3,7 +3,11 @@
 Scoring is a classification-path overlap measure (after Sean Boisen's
 language-similarity work): the overlap of two languages' Glottolog
 classification paths, plus a flat areal score for cross-family neighbours that
-share a country. The candidate set is not "every
+share a country. Candidates are ranked by that score damped by geographic
+distance (``langfamilysim``'s ``combined`` score, see
+:func:`rlr.glottolog.combined_similarity`), so a relative on another
+continent falls below a neighbour slightly further away in the tree. The
+candidate set is not "every
 language" but the languages that actually have a Bible in the eBible Corpus,
 so stages 1 and 2 answer one question between them: which *usable* texts are
 nearest to the target?
@@ -24,7 +28,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 from rlr.types import Location, RelatedLanguage, Unavailable
 
@@ -40,6 +44,20 @@ if TYPE_CHECKING:
 DEFAULT_MIN_SIMILARITY = 0.5
 DEFAULT_LIMIT = 10
 
+#: How candidates are ranked: ``"combined"`` damps the tree score by
+#: distance; ``"path"`` is the tree score alone (RLR's original ranking).
+Scoring = Literal["combined", "path"]
+SCORINGS: tuple[Scoring, ...] = get_args(Scoring)
+DEFAULT_SCORING: Scoring = "combined"
+
+
+def parse_scoring(value: str) -> Scoring:
+    """Validate an ``RLR_SIMILARITY`` value."""
+    for scoring in SCORINGS:
+        if value == scoring:
+            return scoring
+    raise ValueError(f"unknown similarity scoring {value!r}; expected one of {SCORINGS}")
+
 
 def _bare(code: str) -> str:
     return code.split("_", maxsplit=1)[0].lower()
@@ -49,8 +67,10 @@ def find_related_languages(
     context: TranslationContext,
     glottolog: Glottolog,
     candidates: Iterable[LanguageCode],
+    *,
     min_similarity: float = DEFAULT_MIN_SIMILARITY,
     limit: int = DEFAULT_LIMIT,
+    scoring: Scoring = DEFAULT_SCORING,
 ) -> list[RelatedLanguage] | Unavailable:
     """Return the candidates most closely related to ``context.target_language``.
 
@@ -59,8 +79,11 @@ def find_related_languages(
             any languages the translator has opted out of.
         glottolog: The Glottolog index.
         candidates: ISO 639-3 codes to consider, typically the eBible languages.
-        min_similarity: Drop candidates scoring below this.
+        min_similarity: Drop candidates whose tree score (path overlap or
+            areal) is below this. The geographic term orders candidates; it
+            does not remove them.
         limit: Keep at most this many.
+        scoring: The score to rank by and report as ``similarity``.
 
     Returns:
         Related languages, most similar first, then nearest by distance; or
@@ -87,6 +110,7 @@ def find_related_languages(
         if score < min_similarity and code not in requested:
             continue
         distance = glottolog.distance_km(target, languoid)
+        ranked = glottolog.combined(target, languoid) if scoring == "combined" else score
         location = (
             Location(languoid.lat, languoid.lon)
             if languoid.lat is not None and languoid.lon is not None
@@ -96,7 +120,8 @@ def find_related_languages(
             RelatedLanguage(
                 code=code,
                 name=languoid.name,
-                similarity=round(score, 3),
+                similarity=round(ranked, 3),
+                path_similarity=round(score, 3),
                 glottocode=languoid.glottocode,
                 shared_country=shared_country,
                 distance_km=round(distance) if distance is not None else None,

@@ -24,7 +24,7 @@ passage:
 
 1. **`rlr.languages`**: identify closely-related languages by Glottolog
    classification-path overlap plus an areal score for shared countries,
-   computed over the languages that have an eBible text. Reads Glottolog's
+   damped by geographic distance, computed over the languages that have an eBible text. Reads Glottolog's
    CLDF export via `rlr.glottolog`.
 2. **`rlr.catalog`**: keep those with a usably-licensed Bible. eBible's
    `licences.tsv` is the license source (`rlr.ebible`). No-derivatives texts
@@ -69,8 +69,10 @@ The ones you are most likely to touch:
   bake a verse-only assumption into type signatures.
 - **Display rights and derivative rights are separate.** No-derivatives texts
   are shown in stage 3; stages 4 and 5 refuse them with the license named.
-- **Related languages by classification-path overlap**, with geographic
-  distance reported alongside the score.
+- **Related languages by classification-path overlap**, ranked after
+  damping by geographic distance (langfamilysim's `combined` score;
+  `RLR_SIMILARITY=path` turns the damping off). The threshold applies to the
+  undamped score; both scores and the distance are reported.
 - **Machine translation is a backend protocol.** Add a backend by implementing
   `rlr.mt.Translator`; nothing else in the pipeline changes.
 

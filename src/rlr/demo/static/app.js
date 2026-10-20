@@ -149,6 +149,7 @@
       if (rd.language.requested) kin.push("selected by you");
       if (rd.language.shared_country) kin.push("shares a country");
       if (rd.language.distance_km != null) kin.push(`${rd.language.distance_km} km away`);
+      if (rd.language.path_similarity != null && rd.language.path_similarity !== rd.language.similarity) kin.push(`tree ${rd.language.path_similarity.toFixed(2)}`);
       if (rd.original.provenance.title) kin.push(rd.original.provenance.title);
       $(".reading__kin", node).textContent = kin.join(" · ");
       if (rd.language.requested) {

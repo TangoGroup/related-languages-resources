@@ -51,16 +51,21 @@ the eBible Corpus, so stages 1 and 2 answer one question together: which
 usable texts are nearest to the target?
 
 **Trade-off:** a tree-based measure is cheap, reproducible and needs no
-training data, but it is not strongly geographic and there is no ground truth
-to evaluate it against. RLR reports the geographic distance alongside the
-score and lets the translator correct the result: an exclusion list
+training data, but on its own it is not geographic, and there is no ground
+truth to evaluate it against. RLR ranks by the tree score damped by distance
+(langfamilysim's `combined` score), ported as a few lines over the Glottolog
+coordinates RLR already loads rather than taken as a dependency: the package
+answers queries from a large precomputed `edges.csv`, and "clone and run"
+should not need a local build of it. RLR reports both scores and the distance
+and lets the translator correct the result: an exclusion list
 (`TranslationContext.excluded_languages`, `--exclude`) removes languages they
 cannot use, and an inclusion list (`included_languages`, `--include`, "Also
 include" in the demo) adds languages they know whether or not the tree calls
 them related.
 
 **Extension point:** another similarity measure can replace
-`rlr.glottolog.path_similarity` without touching later stages.
+`rlr.glottolog.path_similarity` or `rlr.glottolog.combined_similarity` without
+touching later stages.
 
 ---
 

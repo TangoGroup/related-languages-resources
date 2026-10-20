@@ -24,7 +24,7 @@ def offline_cli(monkeypatch, pipeline):
 def test_languages_lists_scores_and_licenses(offline_cli):
     result = runner.invoke(app, ["languages", "--target", "ngq"])
     assert result.exit_code == 0, result.output
-    assert "0.75  reg   Kara (Tanzania) (shared country)" in result.output
+    assert "0.70  reg   Kara (Tanzania) (shared country), 189 km, tree 0.75" in result.output
     assert "CC BY-NC-ND 4.0" in result.output
 
 
@@ -47,7 +47,7 @@ def test_brief_renders_readings_and_absence(offline_cli):
     )
     assert result.exit_code == 0, result.output
     assert result.output.index("== In swh") < result.output.index("== Kara")
-    assert "== Kara (Tanzania) (reg, similarity 0.75)" in result.output
+    assert "== Kara (Tanzania) (reg, similarity 0.70)" in result.output
     assert "reg 1:6 camel hair" in result.output
     assert (
         "Kara New Testament · Example Publishers · copyright © 2020 · CC BY-SA 4.0" in result.output

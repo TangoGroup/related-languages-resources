@@ -12,6 +12,10 @@ classification paths, divided by the length of the shorter path. Spanish and
 Catalan score about 0.92, English and German about 0.42, and languages in
 different families score 0.
 
+A geographic term (after ``langfamilysim``'s ``combined`` score, also Sean
+Boisen's) damps that score by the distance between the two Glottolog points:
+see :func:`geo_factor`.
+
 The parsed subset is cached as JSON so the 21 MB ``values.csv`` is only read
 once per machine.
 """
@@ -40,6 +44,14 @@ CACHE_NAME = "glottolog/languoids.json"
 #: Score given to a cross-family pair that shares a country, matching the
 #: "areal" edges in ``language-similarity``.
 AREAL_SCORE = 0.15
+
+#: Distance at which the geographic damping has decayed by a factor of e.
+GEO_SCALE_KM = 2000.0
+#: Related-but-distant languages keep at least this share of their tree score,
+#: so families spread by migration (Bantu, Austronesian) are not erased.
+GEO_FLOOR_GENEALOGICAL = 0.3
+#: Sharing a country means nothing at long range.
+GEO_FLOOR_AREAL = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +96,28 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * radius * math.asin(math.sqrt(max(0.0, a)))
 
 
+def geo_factor(distance_km: float, floor: float) -> float:
+    """Damping in ``[floor, 1]``: 1 at zero distance, decaying toward ``floor``.
+
+    ``floor + (1 - floor) * exp(-distance_km / GEO_SCALE_KM)``, as in
+    ``langfamilysim.geo`` (Apache-2.0).
+    """
+    return floor + (1.0 - floor) * math.exp(-distance_km / GEO_SCALE_KM)
+
+
+def combined_similarity(score: float, distance_km: float | None, *, areal: bool) -> float:
+    """``score`` damped by distance; unchanged when either point is unknown.
+
+    Areal scores take :data:`GEO_FLOOR_AREAL`, genealogical ones
+    :data:`GEO_FLOOR_GENEALOGICAL`. This is ``langfamilysim``'s ``combined``
+    column, computed per pair at query time instead of read from its
+    ``edges.csv``.
+    """
+    if distance_km is None:
+        return score
+    return score * geo_factor(distance_km, GEO_FLOOR_AREAL if areal else GEO_FLOOR_GENEALOGICAL)
+
+
 class Glottolog:
     """In-memory index of languoids by glottocode and ISO 639-3 code."""
 
@@ -125,6 +159,12 @@ class Glottolog:
         if shared_country:
             score = max(score, AREAL_SCORE)
         return score, shared_country
+
+    def combined(self, a: Languoid, b: Languoid) -> float:
+        """:meth:`similarity` damped by distance (see :func:`combined_similarity`)."""
+        score, _ = self.similarity(a, b)
+        areal = a.family != b.family or path_similarity(a, b) < AREAL_SCORE
+        return combined_similarity(score, self.distance_km(a, b), areal=areal)
 
     def distance_km(self, a: Languoid, b: Languoid) -> float | None:
         """Distance between the two Glottolog points, if both are known."""
