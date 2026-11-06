@@ -6,15 +6,16 @@ is the agent surfacing results next to the verse a translator is working on.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
 import typer
 
 from rlr.agent import build_pipeline
-from rlr.config import Settings
+from rlr.config import Settings, load_dotenv
 from rlr.languages import suggest_lwcs
-from rlr.mt import NoTranslator, load_backend, load_translator
+from rlr.mt import NoTranslator, gloo_auth_mode, load_backend, load_translator
 from rlr.renderings import (
     RenderingFile,
     bundled_dir,
@@ -246,10 +247,22 @@ def pretranslate(
     typer.echo(f"{added} new rendering(s); {len(existing.entries)} total in {out}")
 
 
+@app.callback()
+def _main() -> None:
+    """Read ``.env`` in the working directory before any command runs."""
+    load_dotenv()
+
+
 @app.command()
 def serve(
     host: str = typer.Option("127.0.0.1", help="Interface to bind."),
     port: int = typer.Option(8765, help="Port to listen on."),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Live MT through Gloo AI Studio (same as RLR_MT=gloo); cached renderings "
+        "remain the fallback.",
+    ),
 ) -> None:
     """Serve the demo UI (needs the 'demo' extra: uv sync --extra demo)."""
     try:
@@ -260,7 +273,21 @@ def serve(
         typer.echo("The demo UI needs the 'demo' extra: uv sync --extra demo")
         raise typer.Exit(code=1) from None
     settings = Settings.from_env()
-    if settings.mt_backend.strip() not in ("", "none"):
+    if live:
+        settings = dataclasses.replace(settings, mt_backend="gloo")
+    if settings.mt_backend.strip().startswith("gloo"):
+        mode = gloo_auth_mode()
+        if mode is None:
+            typer.echo(
+                "Live MT: Gloo AI Studio selected but no key found (set GLOO_API_KEY in .env); "
+                "serving pre-rendered translations only."
+            )
+        else:
+            typer.echo(
+                f"Live MT: {load_backend(settings).name}, auth {mode}; "
+                "pre-rendered translations are the fallback."
+            )
+    elif settings.mt_backend.strip() not in ("", "none"):
         typer.echo(
             f"Loading the {settings.mt_backend} machine-translation model "
             "(the first time this downloads about 11 GB)…"
