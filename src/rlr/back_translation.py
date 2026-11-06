@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from rlr.mt import TranslationUnavailable
+from rlr.mt import TranslationUnavailable, begin_provenance, provenance_label
 from rlr.types import PassageText, Provenance, Unavailable
 
 if TYPE_CHECKING:
@@ -65,6 +65,7 @@ def back_translate(
             f"(backend: {translator.name})",
             lwc,
         )
+    begin_provenance(translator)
     try:
         rendered = translator.translate(source.text, source.language, lwc)
     except TranslationUnavailable as exc:
@@ -74,7 +75,7 @@ def back_translate(
         language=lwc,
         text=rendered,
         provenance=Provenance(
-            source=f"machine back-translation ({translator.name})",
+            source=f"machine back-translation ({provenance_label(translator)})",
             title=f"{source.provenance.title}, rendered into {lwc}",
             publisher=source.provenance.publisher,
             published=source.provenance.published,

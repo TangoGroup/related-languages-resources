@@ -23,8 +23,14 @@ service share one source of truth:
     :func:`rlr.languages.suggest_lwcs`) for suggesting Languages of Wider
     Communication.
 ``RLR_MT``
-    Machine-translation backend: ``none`` (default) or ``madlad`` /
-    ``madlad:<model-id>``. See :mod:`rlr.mt`.
+    Machine-translation backend: ``none`` (default), ``madlad`` /
+    ``madlad:<model-id>``, or ``gloo`` / ``gloo:<model>`` for live MT through
+    Gloo AI Studio with the pre-rendered cache as fallback. See :mod:`rlr.mt`.
+``GLOO_API_KEY`` (or ``GLOO_CLIENT_ID`` + ``GLOO_CLIENT_SECRET``), ``GLOO_MODEL``
+    Gloo AI Studio credentials and router model for ``RLR_MT=gloo``.
+
+The CLI reads a ``.env`` file in the working directory first (see
+:func:`load_dotenv`); variables already set in the environment win.
 ``RLR_SIMILARITY``
     How stage 1 ranks related languages: ``combined`` (default; the tree
     score damped by geographic distance) or ``path`` (the tree score alone).
@@ -40,6 +46,32 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
+
+
+def load_dotenv(path: Path | None = None) -> list[str]:
+    """Load ``KEY=VALUE`` lines from ``.env`` into ``os.environ``.
+
+    Existing variables are never overridden. Returns the names set (never
+    the values, which may be secrets).
+    """
+    env_path = path or Path.cwd() / ".env"
+    if not env_path.is_file():
+        return []
+    loaded: list[str] = []
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.removeprefix("export ").partition("=")
+        key, value = key.strip(), value.strip()
+        if len(value) > 1 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        if key and key not in os.environ:
+            os.environ[key] = value
+            loaded.append(key)
+    return loaded
 
 
 def _default_cache_dir() -> Path:

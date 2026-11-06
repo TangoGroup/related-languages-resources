@@ -6,6 +6,7 @@
 #   ./run languages ngq               list the closest languages with Scripture
 #   ./run check                       lint, typecheck, test
 #   RLR_MT=madlad ./run               the demo with live machine translation (in-process, no server)
+#   ./run demo --live                 the demo with live MT through Gloo AI Studio (key in .env)
 #
 # Needs bash, curl and git. Installs uv (https://astral.sh/uv) if it is missing;
 # everything else lives in ./.venv and ~/.cache/rlr. macOS and Linux.
@@ -28,7 +29,7 @@ ensure_package() {
     # With RLR_MT set (e.g. RLR_MT=madlad) the live machine-translation
     # backend is installed too: torch and transformers, a few GB.
     case "${RLR_MT:-none}" in
-        none|"") uv sync --extra dev --extra demo ;;
+        none|""|gloo*) uv sync --extra dev --extra demo ;;
         *)       uv sync --extra dev --extra demo --extra mt ;;
     esac
 }
@@ -47,7 +48,7 @@ case "$cmd" in
         ensure_uv; ensure_package
         say "Starting the demo at http://127.0.0.1:$PORT (first run downloads about 35 MB of language data)"
         open_browser
-        exec uv run rlr serve --port "$PORT"
+        exec uv run rlr serve --port "$PORT" "$@"
         ;;
     brief)
         [ $# -eq 3 ] || { echo 'usage: ./run brief <target> <lwc> "<passage>"   e.g. ./run brief ngq swh "MRK 1:3"' >&2; exit 2; }

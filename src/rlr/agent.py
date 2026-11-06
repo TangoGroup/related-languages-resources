@@ -28,7 +28,7 @@ from rlr import back_translation, catalog, languages, verses
 from rlr.config import Settings
 from rlr.ebible import EBibleCorpus, vref_path
 from rlr.glottolog import Glottolog
-from rlr.mt import TranslationUnavailable, load_translator
+from rlr.mt import TranslationUnavailable, begin_provenance, load_translator, provenance_label
 from rlr.resources import NotePart
 from rlr.resources.figures_of_speech import ALTERNATIVES_LABEL, FiguresOfSpeech, assemble
 from rlr.types import DISPLAYABLE, LicenseClass, PassageText, Provenance, Unavailable
@@ -223,13 +223,16 @@ class Pipeline:
 
     def _render_note(self, note: ResourceNote, source: LanguageCode, target: LanguageCode) -> str:
         """Translate a note part by part; quoted source text stays verbatim."""
-        rendered = [
-            NotePart(
-                p.role, self.translator.translate(p.text, source, target) if p.translate else p.text
-            )
-            for p in note.parts
-        ]
-        label = self.translator.translate(ALTERNATIVES_LABEL, source, target).rstrip(":")
+        wanted = [p.text for p in note.parts if p.translate] + [ALTERNATIVES_LABEL]
+        many = getattr(self.translator, "translate_many", None)
+        done: list[str] = (
+            list(many(wanted, source, target))
+            if callable(many)
+            else [self.translator.translate(t, source, target) for t in wanted]
+        )
+        label = done.pop().rstrip(":")
+        it = iter(done)
+        rendered = [NotePart(p.role, next(it) if p.translate else p.text) for p in note.parts]
         return assemble(rendered, label)
 
     def _notes(self, context: TranslationContext, passage: PassageRef) -> list[ResourceReading]:
@@ -259,6 +262,7 @@ class Pipeline:
                         context.lwc,
                     )
                 else:
+                    begin_provenance(self.translator)
                     try:
                         rendered = self._render_note(note, source_lang, context.lwc)
                     except TranslationUnavailable as exc:
@@ -273,7 +277,7 @@ class Pipeline:
                         language=context.lwc,
                         text=rendered,
                         provenance=Provenance(
-                            source=f"machine translation ({self.translator.name}) of "
+                            source=f"machine translation ({provenance_label(self.translator)}) of "
                             f"{note.provenance.source}",
                             title=note.provenance.title,
                             publisher=note.provenance.publisher,

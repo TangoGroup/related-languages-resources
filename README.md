@@ -124,7 +124,9 @@ Environment variables:
 |---|---|
 | `RLR_CACHE_DIR` | Download cache (default `~/.cache/rlr`) |
 | `RLR_FIGURES_DIR` | Optional alternative snapshot of the figures-of-speech data (`figs_types.yaml` plus `figs_instances/`). Unset, the copy bundled in `bible-figures-of-speech` is used |
-| `RLR_MT` | Live machine-translation backend: `none` (default) or `madlad[:model-id]`; needs `uv sync --extra mt`. Pre-rendered notes work without it |
+| `RLR_MT` | Live machine-translation backend: `none` (default), `madlad[:model-id]` (needs `uv sync --extra mt`), or `gloo[:model]` for Gloo AI Studio. Pre-rendered notes work without it |
+| `GLOO_API_KEY` | Gloo AI Studio API key, for `RLR_MT=gloo` / `rlr serve --live`. Alternatively `GLOO_CLIENT_ID` + `GLOO_CLIENT_SECRET` (client credentials; or `GLOO_CLIENT_ID=apikey` with the key in `GLOO_CLIENT_SECRET`), the same names Relay uses |
+| `GLOO_MODEL` | Gloo router model (default `gloo-anthropic-claude-sonnet-4.6`) |
 | `RLR_MT_DEVICE` | Force `cuda`, `mps` or `cpu` for the live backend; unset picks the best available |
 | `RLR_RENDERINGS_DIR` | Extra directory of pre-rendered translations (`<lwc>.json.gz`), searched before the cache and the bundled copies |
 | `RLR_LWC_CSV` | Optional `lwc.csv` (per-language LWC probabilities) to suggest LWCs |
@@ -151,6 +153,22 @@ related languages it was not trained on are reported as unavailable rather
 than guessed. It uses an NVIDIA GPU or Apple silicon when present and the CPU
 otherwise; budget about 6 GB of memory and, on a CPU, a few seconds per
 sentence, so a verse with three notes takes about a minute the first time.
+
+**Live machine translation through Gloo AI Studio.** Put a key in `.env`
+in the checkout (copy `.env.example`; the CLI reads it, and variables already
+set in your shell win), then:
+
+```bash
+uv run rlr serve --live          # or: ./run demo --live, or RLR_MT=gloo in .env
+```
+
+Every translation is then made live by the Gloo router (no model download),
+with the pre-rendered set as the fallback: if a live call fails (bad key,
+network, rate limit), the cached rendering is shown and its provenance line
+says `live MT unavailable (…), showing cached`. Each rendering's provenance
+names the backend that produced it (`… via Gloo AI Studio, live` or
+`madlad400-3b-mt, pre-rendered`), and the status line shows the MT backend.
+Without `--live` the cache stays first, as before.
 
 **Extending the pre-rendered set.** `rlr pretranslate --lwc ind --book ROM`
 renders a book's notes once with the live backend into your cache
